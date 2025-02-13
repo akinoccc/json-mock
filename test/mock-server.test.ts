@@ -215,3 +215,61 @@ describe('custom route Test', () => {
     expect(response.body.message).toBe('Custom route response')
   })
 })
+
+/**
+ * Test middleware
+ */
+describe('middleware Test', () => {
+  it('should handle pre middleware', async () => {
+    const server = new MockServer({
+      port: getRandomPort(),
+      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
+      prefix: '/api',
+    })
+
+    server.pre((req, _, next) => {
+      req.query.page_size = '1'
+      next()
+    })
+
+    await server.start()
+
+    const app = server.getApp()
+    const response = await request(app)
+      .get('/api/users')
+      .expect(200)
+
+    console.log(response.body)
+    expect(response.body.data.length).toBe(1)
+  })
+
+  it('should handle post middleware', async () => {
+    const server = new MockServer({
+      port: getRandomPort(),
+      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
+      prefix: '/api',
+    })
+
+    server.post((req, res) => {
+      res.status(200).json({
+        message: 'Middleware response',
+        data: [
+          {
+            id: 1,
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+          },
+        ],
+      })
+    })
+
+    await server.start()
+
+    const app = server.getApp()
+    const response = await request(app)
+      .post('/api/users')
+      .expect(200)
+
+    expect(response.body.data).toBeTruthy()
+  })
+})
