@@ -67,6 +67,17 @@ class ConfigManager {
 
     return db
   }
+
+  /**
+   * @description Reset the database
+   * @returns void
+   */
+  public async resetDatabase(): Promise<void> {
+    for (const db of this.databases.values()) {
+      db.data = {}
+      await db.write()
+    }
+  }
 }
 
 export default ConfigManager

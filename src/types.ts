@@ -4,8 +4,8 @@ import type jwt from 'jsonwebtoken'
 
 export interface Config {
   port: number
-  delay: number
-  prefix: string
+  delay?: number
+  prefix?: string
   dbPath?: string
   apiPath?: string
   auth?: AuthConfig
