@@ -187,3 +187,31 @@ describe('parameter Validation Test', () => {
     expect(response.body.error).toBeTruthy()
   })
 })
+
+/**
+ * Test custom route
+ */
+describe('custom route Test', () => {
+  it('should handle custom route', async () => {
+    const server = new MockServer({
+      port: getRandomPort(),
+      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
+      prefix: '/api',
+    })
+
+    server.addCustomRoute('get', '/comments/:id', (req, res) => {
+      res.status(200).json({
+        message: 'Custom route response',
+      })
+    })
+
+    await server.start()
+
+    const app = server.getApp()
+    const response = await request(app)
+      .get('/api/comments/1')
+      .expect(200)
+
+    expect(response.body.message).toBe('Custom route response')
+  })
+})
