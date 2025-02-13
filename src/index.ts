@@ -312,7 +312,7 @@ class MockServer {
     handler: (req: Request, res: Response) => void,
   ): this {
     const methodName = method
-    this.app[methodName](path, handler)
+    this.app[methodName](`${this.config.prefix}${path}`, handler)
     return this
   }
 
