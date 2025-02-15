@@ -10,4 +10,7 @@ export default antfu({
   'node/prefer-global/process': 'off',
   'jsdoc/require-returns-description': 'off',
   'jsdoc/require-returns-check': 'off',
+  'unused-imports/no-unused-vars': 'warn',
+  'unused-imports/no-unused-imports': 'warn',
+  'antfu/no-top-level-await': 'off',
 })

@@ -56,7 +56,7 @@ class MockServer {
     this.app.use(bodyParser.json())
     this.app.use(bodyParser.urlencoded({ extended: true }))
 
-    if (this.config.delay > 0) {
+    if ((this.config.delay ?? 0) > 0) {
       this.app.use((req: Request, res: Response, next: NextFunction) => {
         setTimeout(next, this.config.delay)
       })

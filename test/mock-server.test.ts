@@ -239,7 +239,6 @@ describe('middleware Test', () => {
       .get('/api/users')
       .expect(200)
 
-    console.log(response.body)
     expect(response.body.data.length).toBe(1)
   })
 
