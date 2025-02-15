@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { Validator } from '../Validator'
 
 describe('validator', () => {
-  it('应该验证必填字段', () => {
+  it('should validate required fields', () => {
     const validator = new Validator({
       name: { type: 'string', required: true },
     })
 
     const result = validator.validate({})
     expect(result.isValid).toBe(false)
-    expect(result.errors[0]).toContain('必填')
+    expect(result.errors[0]).toContain('required')
   })
 
-  it('应该验证字段类型', () => {
+  it('should validate field types', () => {
     const validator = new Validator({
       age: { type: 'number' },
       name: { type: 'string' },
@@ -23,19 +23,19 @@ describe('validator', () => {
     })
 
     const result = validator.validate({
-      age: '25', // 错误类型
-      name: 123, // 错误类型
-      active: 1, // 错误类型
-      tags: {}, // 错误类型
-      profile: [], // 错误类型
-      birthday: 'invalid-date', // 错误类型
+      age: '25', // wrong type
+      name: 123, // wrong type
+      active: 1, // wrong type
+      tags: {}, // wrong type
+      profile: [], // wrong type
+      birthday: 'invalid-date', // wrong type
     })
 
     expect(result.isValid).toBe(false)
     expect(result.errors).toHaveLength(6)
   })
 
-  it('应该验证数值范围', () => {
+  it('should validate numeric range', () => {
     const validator = new Validator({
       age: { type: 'number', min: 0, max: 150 },
       name: { type: 'string', min: 2, max: 50 },
@@ -43,16 +43,16 @@ describe('validator', () => {
     })
 
     const result = validator.validate({
-      age: 200, // 超出范围
-      name: 'a', // 太短
-      tags: ['1', '2', '3', '4', '5', '6'], // 数组太长
+      age: 200, // out of range
+      name: 'a', // too short
+      tags: ['1', '2', '3', '4', '5', '6'], // array too long
     })
 
     expect(result.isValid).toBe(false)
     expect(result.errors).toHaveLength(3)
   })
 
-  it('应该验证正则表达式', () => {
+  it('should validate regex', () => {
     const validator = new Validator({
       email: { type: 'string', pattern: /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/ },
     })
@@ -62,10 +62,10 @@ describe('validator', () => {
     })
 
     expect(result.isValid).toBe(false)
-    expect(result.errors[0]).toContain('格式')
+    expect(result.errors[0]).toContain('format')
   })
 
-  it('应该验证枚举值', () => {
+  it('should validate enum values', () => {
     const validator = new Validator({
       role: { type: 'string', enum: ['user', 'admin'] },
     })
@@ -75,16 +75,16 @@ describe('validator', () => {
     })
 
     expect(result.isValid).toBe(false)
-    expect(result.errors[0]).toContain('之一')
+    expect(result.errors[0]).toContain('one of')
   })
 
-  it('应该支持自定义验证', () => {
+  it('should support custom validation', () => {
     const validator = new Validator({
       password: {
         type: 'string',
         custom: (value) => {
           if (value.length < 6)
-            return '密码太短'
+            return 'password is too short'
           return true
         },
       },
@@ -95,6 +95,6 @@ describe('validator', () => {
     })
 
     expect(result.isValid).toBe(false)
-    expect(result.errors[0]).toBe('密码太短')
+    expect(result.errors[0]).toBe('password is too short')
   })
 })

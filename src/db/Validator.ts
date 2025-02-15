@@ -25,25 +25,25 @@ export class Validator {
     for (const [field, rules] of Object.entries(this.schema)) {
       const value = data[field]
 
-      // 检查必填字段
+      // check required field
       if (rules.required && (value === undefined || value === null)) {
-        errors.push(`字段 ${field} 是必填的`)
+        errors.push(`the field \`${field}\` is required`)
         continue
       }
 
-      // 如果字段不存在且不是必填，跳过后续验证
+      // if the field is not exist and not required, skip the validation
       if (value === undefined || value === null) {
         continue
       }
 
-      // 类型检查
+      // type check
       if (rules.type) {
         const typeError = this.validateType(field, value, rules.type)
         if (typeError)
           errors.push(typeError)
       }
 
-      // 数值范围检查
+      // number range check
       if ((rules.min !== undefined || rules.max !== undefined)
         && (rules.type === 'number' || rules.type === 'string' || rules.type === 'array')) {
         const rangeError = this.validateRange(field, value, rules)
@@ -51,26 +51,26 @@ export class Validator {
           errors.push(rangeError)
       }
 
-      // 正则表达式检查
+      // regex check
       if (rules.pattern && typeof value === 'string') {
         if (!rules.pattern.test(value)) {
-          errors.push(`字段 ${field} 不匹配指定的格式`)
+          errors.push(`the field \`${field}\` does not match the specified format`)
         }
       }
 
-      // 枚举值检查
+      // enum check
       if (rules.enum && !rules.enum.includes(value)) {
-        errors.push(`字段 ${field} 的值必须是以下之一: ${rules.enum.join(', ')}`)
+        errors.push(`the field \`${field}\` must be one of the following: ${rules.enum.join(', ')}`)
       }
 
-      // 自定义验证
+      // custom check
       if (rules.custom) {
         const customResult = rules.custom(value)
         if (typeof customResult === 'string') {
           errors.push(customResult)
         }
         else if (!customResult) {
-          errors.push(`字段 ${field} 未通过自定义验证`)
+          errors.push(`the field \`${field}\` does not pass the custom validation`)
         }
       }
     }
@@ -85,27 +85,27 @@ export class Validator {
     switch (type) {
       case 'string':
         if (typeof value !== 'string')
-          return `字段 ${field} 必须是字符串类型`
+          return `the field \`${field}\` must be a string`
         break
       case 'number':
         if (typeof value !== 'number')
-          return `字段 ${field} 必须是数字类型`
+          return `the field \`${field}\` must be a number`
         break
       case 'boolean':
         if (typeof value !== 'boolean')
-          return `字段 ${field} 必须是布尔类型`
+          return `the field \`${field}\` must be a boolean`
         break
       case 'array':
         if (!Array.isArray(value))
-          return `字段 ${field} 必须是数组类型`
+          return `the field \`${field}\` must be an array`
         break
       case 'object':
         if (typeof value !== 'object' || Array.isArray(value) || value === null)
-          return `字段 ${field} 必须是对象类型`
+          return `the field \`${field}\` must be an object`
         break
       case 'date':
         if (!(value instanceof Date) && Number.isNaN(Date.parse(value)))
-          return `字段 ${field} 必须是有效的日期`
+          return `the field \`${field}\` must be a valid date`
         break
     }
     return null
@@ -116,16 +116,16 @@ export class Validator {
 
     if (rules.type === 'number') {
       if (min !== undefined && value < min)
-        return `字段 ${field} 不能小于 ${min}`
+        return `the field \`${field}\` must be greater than ${min}`
       if (max !== undefined && value > max)
-        return `字段 ${field} 不能大于 ${max}`
+        return `the field \`${field}\` must be less than ${max}`
     }
     else if (rules.type === 'string' || rules.type === 'array') {
       const length = value.length
       if (min !== undefined && length < min)
-        return `字段 ${field} 的长度不能小于 ${min}`
+        return `the field \`${field}\` length must be greater than ${min}`
       if (max !== undefined && length > max)
-        return `字段 ${field} 的长度不能大于 ${max}`
+        return `the field \`${field}\` length must be less than ${max}`
     }
 
     return null

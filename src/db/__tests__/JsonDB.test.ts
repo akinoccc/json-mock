@@ -8,24 +8,26 @@ describe('jsonDB', () => {
   let db: JsonDB
 
   beforeEach(() => {
-    db = new JsonDB(testDbPath)
+    db = new JsonDB({
+      dbPath: testDbPath,
+      modelsPath: resolve(__dirname, './models'),
+    })
   })
 
   afterEach(() => {
-    // 清理测试数据库文件
     rm(testDbPath, () => {})
   })
 
-  it('应该创建新的数据库实例', () => {
+  it('should create a new database instance', () => {
     expect(db).toBeInstanceOf(JsonDB)
   })
 
-  it('应该创建新的集合', () => {
+  it('should create a new collection', () => {
     const collection = db.collection('users')
     expect(collection).toBeDefined()
   })
 
-  it('应该从现有文件加载数据', () => {
+  it('should load data from an existing file', () => {
     const initialData = {
       users: [
         { id: '1', name: '张三' },
@@ -33,7 +35,10 @@ describe('jsonDB', () => {
     }
     writeFileSync(testDbPath, JSON.stringify(initialData))
 
-    const newDb = new JsonDB(testDbPath)
+    const newDb = new JsonDB({
+      dbPath: testDbPath,
+      modelsPath: resolve(__dirname, '../models'),
+    })
     expect(newDb.getData()).toEqual(initialData)
   })
 })

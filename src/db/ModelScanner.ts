@@ -1,6 +1,6 @@
 import type { JsonDB } from './JsonDB'
-import { readdir } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { promises as fs } from 'node:fs'
+import { join } from 'node:path'
 import { glob } from 'glob'
 
 export class ModelScanner {
@@ -13,28 +13,50 @@ export class ModelScanner {
   }
 
   addModelPath(path: string) {
-    this.modelPaths.push(resolve(path))
+    this.modelPaths.push(path)
     return this
   }
 
   async scan() {
     for (const modelPath of this.modelPaths) {
-      const files = await glob('**/*.{ts,js}', {
-        cwd: modelPath,
-        ignore: ['**/*.d.ts', '**/*.test.ts', '**/*.spec.ts'],
-      })
+      try {
+        const stat = await fs.stat(modelPath)
 
-      for (const file of files) {
-        const fullPath = join(modelPath, file)
-        const module = await import(fullPath)
+        if (stat.isDirectory()) {
+          // 如果是目录，使用 glob 搜索
+          const files = await glob('**/*.{ts,js}', {
+            cwd: modelPath,
+            ignore: ['**/*.d.ts', '**/*.test.ts', '**/*.spec.ts'],
+          })
 
-        // 遍历模块中的所有导出
-        for (const exportedItem of Object.values(module)) {
-          if (this.isModelClass(exportedItem)) {
-            this.db.registerModel(exportedItem)
+          for (const file of files) {
+            await this.loadModelFile(join(modelPath, file))
           }
         }
+        else if (stat.isFile()) {
+          // 如果是文件，直接加载
+          await this.loadModelFile(modelPath)
+        }
       }
+      catch (error) {
+        console.error(`扫描路径失败: ${modelPath}`, error)
+      }
+    }
+  }
+
+  private async loadModelFile(fullPath: string) {
+    try {
+      const module = await import(fullPath)
+
+      // 遍历模块中的所有导出
+      for (const exportedItem of Object.values(module)) {
+        if (this.isModelClass(exportedItem)) {
+          this.db.registerModel(exportedItem)
+        }
+      }
+    }
+    catch (error) {
+      console.error(`加载模型文件失败: ${fullPath}`, error)
     }
   }
 

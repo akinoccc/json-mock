@@ -17,7 +17,7 @@ export class ModelManager {
     const fields = Reflect.getMetadata('model:fields', modelClass) || {}
 
     if (!modelName)
-      throw new Error(`模型 ${modelClass.name} 未使用 @Model 装饰器`)
+      throw new Error(`model ${modelClass.name} is not decorated with @Model`)
 
     const schema = this.convertFieldsToSchema(fields)
     const collection = this.db.collection(modelName)
@@ -36,7 +36,7 @@ export class ModelManager {
   getModel(name: string): Collection {
     const model = this.models.get(name)
     if (!model)
-      throw new Error(`模型 ${name} 未注册`)
+      throw new Error(`the model ${name} is not registered`)
     return model.collection
   }
 

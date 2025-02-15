@@ -1,4 +1,3 @@
-import type { JsonDB } from './JsonDB'
 import type { SchemaDefinition } from './Validator'
 import { Validator } from './Validator'
 
@@ -9,7 +8,7 @@ interface QueryOperator {
 }
 
 type ComparisonOperator =
-  | '=='
+  | '='
   | '!='
   | '>'
   | '>='
@@ -21,6 +20,9 @@ type ComparisonOperator =
   | 'starts-with'
   | 'ends-with'
   | 'exists'
+  | 'between'
+  | 'is empty'
+  | 'is not empty'
 
 export class Collection {
   private data: any[]
@@ -48,10 +50,16 @@ export class Collection {
     return results[0] || null
   }
 
+  findById(id: string | number) {
+    this.queryChain.push({ field: 'id', operator: '=', value: id })
+    const results = this.executeQuery()
+    return results[0] || null
+  }
+
   insert(doc: any) {
     const validation = this.validateDocument(doc)
     if (!validation.isValid) {
-      throw new Error(`数据验证失败: ${validation.errors.join(', ')}`)
+      throw new Error(`validation failed: ${validation.errors.join(', ')}`)
     }
 
     const newDoc = { id: this.generateId(), ...doc }
@@ -60,11 +68,11 @@ export class Collection {
     return newDoc
   }
 
-  update(updateData: any) {
-    // 更新应该不需要验证
+  updateMany(updateData: any) {
+    // update should not be validated
     // const validation = this.validateDocument(updateData)
     // if (!validation.isValid) {
-    //   throw new Error(`数据验证失败: ${validation.errors.join(', ')}`)
+    //   throw new Error(`validation failed: ${validation.errors.join(', ')}`)
     // }
 
     const toUpdate = this.executeQuery()
@@ -73,6 +81,14 @@ export class Collection {
     })
     this.saveCallback()
     return toUpdate
+  }
+
+  updateById(id: string | number, updateData: any) {
+    const toUpdate = this.findById(id)
+    if (!toUpdate) {
+      throw new Error('Not found')
+    }
+    return this.updateMany(updateData)?.[0]
   }
 
   delete() {
@@ -91,7 +107,7 @@ export class Collection {
     for (const doc of docs) {
       const validation = this.validateDocument(doc)
       if (!validation.isValid) {
-        throw new Error(`数据验证失败: ${validation.errors.join(', ')}`)
+        throw new Error(`validation failed: ${validation.errors.join(', ')}`)
       }
     }
 
@@ -107,7 +123,7 @@ export class Collection {
   save(doc: any) {
     const validation = this.validateDocument(doc)
     if (!validation.isValid) {
-      throw new Error(`数据验证失败: ${validation.errors.join(', ')}`)
+      throw new Error(`validation failed: ${validation.errors.join(', ')}`)
     }
 
     if (doc.id) {
@@ -215,7 +231,7 @@ export class Collection {
         const fieldValue = item[field]
 
         switch (operator) {
-          case '==':
+          case '=':
             return fieldValue === value
           case '!=':
             return fieldValue !== value
@@ -247,6 +263,12 @@ export class Collection {
               && fieldValue.endsWith(String(value))
           case 'exists':
             return value ? field in item : !(field in item)
+          case 'between':
+            return fieldValue >= value[0] && fieldValue <= value[1]
+          case 'is empty':
+            return fieldValue === '' || fieldValue === null || fieldValue === undefined || (Array.isArray(fieldValue) && fieldValue.length === 0)
+          case 'is not empty':
+            return fieldValue !== '' && fieldValue !== null && fieldValue !== undefined || (Array.isArray(fieldValue) && fieldValue.length > 0)
           default:
             return false
         }
@@ -349,5 +371,4 @@ interface PopulateOptions {
 
 interface IndexOptions {
   unique?: boolean
-  sparse?: boolean
 }

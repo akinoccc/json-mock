@@ -12,8 +12,8 @@ describe('collection', () => {
     collection = new Collection(testData, saveCallback)
   })
 
-  describe('基本 CRUD 操作', () => {
-    it('应该插入文档', () => {
+  describe('Basic CRUD operations', () => {
+    it('should insert a document', () => {
       collection.insert({ name: '张三', age: 25 })
       expect(testData).toHaveLength(1)
       expect(testData[0]).toMatchObject({
@@ -23,7 +23,7 @@ describe('collection', () => {
       expect(testData[0].id).toBeDefined()
     })
 
-    it('应该查询文档', () => {
+    it('should query documents', () => {
       collection.insert({ name: '张三', age: 25 })
       collection.insert({ name: '李四', age: 30 })
 
@@ -35,28 +35,28 @@ describe('collection', () => {
       expect(results[0].name).toBe('李四')
     })
 
-    it('应该更新文档', () => {
+    it('should update a document', () => {
       collection.insert({ name: '张三', age: 25 })
 
       collection
-        .where('name', '==', '张三')
-        .update({ age: 26 })
+        .where('name', '=', '张三')
+        .updateMany({ age: 26 })
 
       expect(testData[0].age).toBe(26)
     })
 
-    it('应该删除文档', () => {
+    it('should delete a document', () => {
       collection.insert({ name: '张三', age: 25 })
 
       collection
-        .where('name', '==', '张三')
+        .where('name', '=', '张三')
         .delete()
 
       expect(testData).toHaveLength(0)
     })
   })
 
-  describe('查询操作符', () => {
+  describe('Query operators', () => {
     beforeEach(() => {
       collection.insertMany([
         { name: '张三', age: 25, tags: ['开发', '前端'] },
@@ -65,30 +65,65 @@ describe('collection', () => {
       ])
     })
 
-    it('应该支持等于操作符', () => {
-      const results = collection.where('age', '==', 25).find()
+    it('should support the equal operator', () => {
+      const results = collection.where('age', '=', 25).find()
       expect(results).toHaveLength(1)
       expect(results[0].name).toBe('张三')
     })
 
-    it('应该支持大于操作符', () => {
+    it('should support the greater than operator', () => {
       const results = collection.where('age', '>', 25).find()
       expect(results).toHaveLength(2)
     })
 
-    it('应该支持 in 操作符', () => {
+    it('should support the in operator', () => {
       const results = collection.where('age', 'in', [25, 30]).find()
       expect(results).toHaveLength(2)
     })
 
-    it('应该支持 contains 操作符', () => {
+    it('should support the contains operator', () => {
       const results = collection.where('tags', 'contains', '前端').find()
       expect(results).toHaveLength(1)
       expect(results[0].name).toBe('张三')
     })
+
+    it('should support the starts-with operator', () => {
+      const results = collection.where('name', 'starts-with', '张').find()
+      expect(results).toHaveLength(1)
+      expect(results[0].name).toBe('张三')
+    })
+
+    it('should support the ends-with operator', () => {
+      const results = collection.where('name', 'ends-with', '三').find()
+      expect(results).toHaveLength(1)
+      expect(results[0].name).toBe('张三')
+    })
+
+    it('should support the exists operator', () => {
+      const results = collection.where('name', 'exists', true).find()
+      expect(results.length).toBeGreaterThan(1)
+      expect(results[0].name).toBe('张三')
+    })
+
+    it('should support the between operator', () => {
+      const results = collection.where('age', 'between', [25, 30]).find()
+      expect(results.length).toBeGreaterThan(1)
+    })
+
+    it('should support the is empty operator', () => {
+      const results = collection.where('name', 'is empty').find()
+      expect(results).toHaveLength(0)
+      expect(results[0]).toBeUndefined()
+    })
+
+    it('should support the is not empty operator', () => {
+      const results = collection.where('name', 'is not empty').find()
+      expect(results.length).toBeGreaterThan(1)
+      expect(results[0].name).toBeTruthy()
+    })
   })
 
-  describe('聚合操作', () => {
+  describe('Aggregation operations', () => {
     beforeEach(() => {
       collection.insertMany([
         { name: '张三', age: 25, role: 'dev' },
@@ -97,21 +132,21 @@ describe('collection', () => {
       ])
     })
 
-    it('应该支持 $match 阶段', () => {
+    it('should support the $match stage', () => {
       const results = collection.aggregate([
         { $match: { role: 'dev' } },
       ])
       expect(results).toHaveLength(2)
     })
 
-    it('应该支持 $sort 阶段', () => {
+    it('should support the $sort stage', () => {
       const results = collection.aggregate([
         { $sort: { age: -1 } },
       ])
       expect(results[0].age).toBe(30)
     })
 
-    it('应该支持 $group 阶段', () => {
+    it('should support the $group stage', () => {
       const results = collection.aggregate([
         {
           $group: {
@@ -138,7 +173,7 @@ describe('collection', () => {
       expect(designerGroup.totalAge).toBe(28)
     })
 
-    it('应该处理空组的聚合', () => {
+    it('should handle empty groups', () => {
       const results = collection.aggregate([
         {
           $match: { role: 'not-exist' },
