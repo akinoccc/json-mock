@@ -6,17 +6,18 @@ import type {
   QueryParams,
   ValidationSchema,
 } from './types'
+import path from 'node:path'
 import bodyParser from 'body-parser'
 import cors from 'cors'
 import express from 'express'
 import Auth from './auth'
-import ConfigManager from './config'
+import Service from './service'
 import Validator from './validator'
 
 class MockServer {
   private config: Config
   private app: Express
-  private configManager: ConfigManager
+  private configManager: Service
   private validator: Validator
   private auth: Auth
   private middlewares: {
@@ -29,16 +30,17 @@ class MockServer {
    * @param config - The configuration for the mock server
    * @returns void
    */
-  constructor(config: Partial<Config> = {}) {
-    this.config = {
-      port: 3000,
-      delay: 0,
-      prefix: '/api',
-      ...config,
-    }
+  constructor(config = {
+    port: 3000,
+    delay: 0,
+    prefix: '/api',
+    dbModelPath: '',
+    dbStoragePath: '',
+  } as Config) {
+    this.config = config
 
     this.app = express()
-    this.configManager = new ConfigManager(this.config)
+    this.configManager = new Service(this.config)
     this.validator = new Validator()
     this.auth = new Auth(this.config.auth)
     this.middlewares = {
@@ -92,8 +94,8 @@ class MockServer {
    * @returns void
    */
   public async start(): Promise<void> {
+    await this.configManager.initialize()
     this.setupMiddlewares()
-    await this.configManager.initializeDataSource()
 
     this.middlewares.pre.forEach(middleware => this.app.use(middleware))
     this.setupRoutes()
@@ -102,6 +104,14 @@ class MockServer {
     this.app.listen(this.config.port, () => {
       console.log(`Mock server is running on port ${this.config.port}`)
     })
+  }
+
+  /**
+   * @description Stop the mock server
+   * @returns void
+   */
+  public async stop() {
+    this.app.removeAllListeners()
   }
 
   /**
@@ -133,12 +143,17 @@ class MockServer {
       return
     }
 
-    let data = db.data[resource] || []
+    let collection = db.getModel(resource)
+    if (!collection) {
+      res.status(404).json({ error: 'Resource not found' })
+      return
+    }
 
-    Object.keys(query).forEach((key) => {
-      data = data.filter((item: any) => item[key] === query[key])
+    Object.entries(query).forEach(([key, value]) => {
+      collection = collection.where(key, '=', value)
     })
 
+    const data = collection.find()
     const start = (current_page - 1) * page_size
     const end = current_page * page_size
     const paginatedData = data.slice(start, end)
@@ -169,7 +184,7 @@ class MockServer {
       return
     }
 
-    const item = db.data[resource]?.find((item: any) => item.id === Number.parseInt(id))
+    const item = db.getModel(resource)?.findById(id)
     if (!item) {
       res.status(404).json({ error: 'Not found' })
       return
@@ -200,20 +215,21 @@ class MockServer {
       return
     }
 
+    const collection = db.getModel(resource)
+    if (!collection) {
+      res.status(404).json({ error: 'Resource not found' })
+      return
+    }
+
     const newItem = {
-      id: Date.now(),
       ...value,
       createdBy: req.user?.id,
     }
 
-    if (!Array.isArray(db.data[resource])) {
-      db.data[resource] = []
-    }
-    db.data[resource].push(newItem)
-    await db.write()
+    const result = collection.insert(newItem)
 
     res.status(200).json({
-      data: newItem,
+      data: result,
       message: 'Resource created successfully',
     })
   }
@@ -240,27 +256,15 @@ class MockServer {
       return
     }
 
-    if (!Array.isArray(db.data[resource])) {
+    const collection = db.getModel(resource)
+    if (!collection) {
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
-    const index = db.data[resource]?.findIndex((item: any) => item.id === Number.parseInt(id))
-    if (index === -1) {
-      res.status(404).json({ error: 'Not found' })
-      return
-    }
+    const result = collection.updateById(id, { ...value, updatedAt: Date.now() })
 
-    const item = db.data[resource][index]
-    if (this.config.auth?.enabled && item.createdBy !== req.user?.id) {
-      res.status(403).json({ error: 'Permission denied' })
-      return
-    }
-
-    db.data[resource][index] = { ...item, ...value, updatedAt: Date.now() }
-    await db.write()
-
-    res.json(db.data[resource][index])
+    res.json(result)
   }
 
   /**
@@ -276,25 +280,24 @@ class MockServer {
       return
     }
 
-    if (!Array.isArray(db.data[resource])) {
+    const collection = db.getModel(resource)
+    if (!collection) {
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
-    const index = db.data[resource]?.findIndex((item: any) => item.id === Number.parseInt(id))
-    if (index === -1) {
+    const item = collection.findById(id)
+    if (!item) {
       res.status(404).json({ error: 'Not found' })
       return
     }
 
-    const item = db.data[resource][index]
     if (this.config.auth?.enabled && item.createdBy !== req.user?.id) {
       res.status(403).json({ error: 'Permission denied' })
       return
     }
 
-    db.data[resource].splice(index, 1)
-    await db.write()
+    collection.delete()
 
     res.status(204).end()
   }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import Auth from '../src/auth'
 
-describe('auth Test', () => {
+describe('auth test', () => {
   it('should generate and verify token', () => {
     const auth = new Auth({
       enabled: true,

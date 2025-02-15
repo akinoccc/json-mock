@@ -25,7 +25,6 @@ class Auth {
       return jwt.verify(token, this.secret)
     }
     catch (error) {
-      console.error(error)
       return null
     }
   }

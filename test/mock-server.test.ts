@@ -1,274 +1,331 @@
+import type e from 'express'
+import { rm } from 'node:fs/promises'
 import Joi from 'joi'
 import request from 'supertest'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import MockServer from '../src/index'
-import { getRandomPort } from './util'
+import { getRandomPort, getRandomString } from './util'
 
 /**
  * Test mock server CURD
  */
-describe('mockServer CURD Test', () => {
-  it('should create server instance', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
+describe('mock server', () => {
+  let server: MockServer
+  let app: e.Express
+  const alreadyUsedPorts: number[] = []
+  const dbStoragePath = new URL(`./data-${getRandomString()}.json`, import.meta.url).pathname
+
+  beforeEach(async () => {
+    let port = getRandomPort()
+    while (alreadyUsedPorts.includes(port)) {
+      port = getRandomPort()
+    }
+    alreadyUsedPorts.push(port)
+
+    server = new MockServer({
+      port,
       delay: 0,
       prefix: '/api',
-    })
-
-    const app = server.getApp()
-    expect(app).toBeTruthy()
-  })
-
-  it('should handle GET requests and return paginated data', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
+      dbStoragePath: dbStoragePath,
+      dbModelPath: new URL('./models.ts', import.meta.url).pathname,
     })
 
     await server.start()
+    app = server.getApp()
 
-    const app = server.getApp()
-    const response = await request(app)
-      .get('/api/users')
-      .expect(200)
-
-    expect(response.body.data).toBeTruthy()
-    expect(response.body.pagination).toBeTruthy()
-  })
-
-  it('should handle POST requests and return created data', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
-    })
-
-    await server.start()
-
-    const app = server.getApp()
-    const response = await request(app)
+    await request(app)
       .post('/api/users')
       .send({
-        id: Date.now(),
+        id: 1,
         name: 'John Doe',
         email: 'john.doe@example.com',
       })
-      .expect(200)
 
-    expect(response.body.data).toBeTruthy()
+    await request(app)
+      .post('/api/users')
+      .send({
+        id: 2,
+        name: 'Jane Doe',
+        email: 'jane.doe@example.com',
+      })
+
+    await request(app)
+      .post('/api/posts')
+      .send({
+        id: 1,
+        title: 'Post 1',
+        content: 'Content 1',
+        authorId: 1,
+      })
+
+    await request(app)
+      .post('/api/posts')
+      .send({
+        id: 2,
+        title: 'Post 2',
+        content: 'Content 2',
+        authorId: 2,
+      })
   })
 
-  it('should handle PUT requests and return updated data', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
+  afterEach(async () => {
+    server.stop()
+    await rm(dbStoragePath)
+  })
+
+  describe('curd', () => {
+    it('should create server instance', async () => {
+      expect(app).toBeTruthy()
     })
 
-    await server.start()
+    it('should handle GET request and return paginated data', async () => {
+      const response = await request(app)
+        .get('/api/users')
+        .expect(200)
 
-    const app = server.getApp()
-    await request(app)
-      .put('/api/users/2')
-      .send({
+      expect(response.body.data).toBeInstanceOf(Array)
+      expect(response.body.pagination).toMatchObject({
+        total: expect.any(Number),
+        current_page: expect.any(Number),
+        per_page: expect.any(Number),
+        total_pages: expect.any(Number),
+      })
+    })
+
+    it('should handle POST request and return created data', async () => {
+      const response = await request(app)
+        .post('/api/users')
+        .send({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+        })
+        .expect(200)
+
+      expect(response.body.data).toMatchObject({
+        id: expect.any(String),
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+      })
+    })
+
+    it('should handle PUT request and return updated data', async () => {
+      const createResponse = await request(app)
+        .post('/api/users')
+        .send({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+        })
+
+      const userId = createResponse.body.data.id
+
+      const response = await request(app)
+        .put(`/api/users/${userId}`)
+        .send({
+          name: 'John Doe Updated',
+        })
+        .expect(200)
+
+      expect(response.body).toMatchObject({
+        id: userId,
         name: 'John Doe Updated',
-      })
-      .expect(200)
-  })
-
-  it('should handle DELETE requests and return deleted data', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
-    })
-
-    await server.start()
-
-    const app = server.getApp()
-
-    // Add a new data for testing
-    const response = await request(app)
-      .post('/api/users')
-      .send({
-        id: Date.now(),
-        name: 'John Doe',
         email: 'john.doe@example.com',
       })
-      .expect(200)
-
-    await request(app)
-      .delete(`/api/users/${response.body.data.id}`)
-      .expect(204)
-  })
-})
-
-/**
- * Test token validation
- */
-describe('token Validation Test', () => {
-  it('should handle token validation', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
-      auth: {
-        enabled: true,
-        secret: 'test-secret',
-      },
     })
 
-    await server.start()
+    it('should handle DELETE request', async () => {
+      const createResponse = await request(app)
+        .post('/api/users')
+        .send({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+        })
 
-    const app = server.getApp()
-    await request(app)
-      .post('/api/users')
-      .send({
-        name: 'John Doe',
-        email: 'john.doe@example.com',
+      const userId = createResponse.body.data.id
+
+      await request(app)
+        .delete(`/api/users/${userId}`)
+        .expect(204)
+
+      await request(app)
+        .get(`/api/users/${userId}`)
+        .expect(404)
+    })
+  })
+
+  /**
+   * Test data validator
+   */
+  describe('data validator', () => {
+    it('should validate request parameters', async () => {
+      server.addValidation('users', {
+        name: Joi.string().required(),
+        email: Joi.string().email(),
       })
-      .expect(401)
+
+      const response = await request(app)
+        .post('/api/users')
+        .send({
+          email: 'invalid-email',
+        })
+        .expect(400)
+
+      expect(response.body.error).toBe('Validation error')
+      expect(response.body.details).toBeInstanceOf(Array)
+    })
   })
 
-  it('should handle token validation with valid token', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
-      auth: {
-        enabled: true,
-        secret: 'test-secret',
-      },
-    })
-
-    await server.start()
-
-    const app = server.getApp()
-    const response = await request(app)
-      .post('/api/users')
-      .send({
-        name: 'John Doe',
-        email: 'john.doe@example.com',
+  /**
+   * Test custom route
+   */
+  describe('custom route', () => {
+    it('should handle custom route', async () => {
+      const customServer = new MockServer({
+        port: getRandomPort(),
+        dbStoragePath: new URL('./data.json', import.meta.url).pathname,
+        dbModelPath: new URL('./models.ts', import.meta.url).pathname,
+        prefix: '/api',
       })
-      .set('Authorization', `Bearer ${server.generateToken({ id: 1, name: 'John Doe' })}`)
-      .expect(200)
 
-    expect(response.body.data).toBeTruthy()
-  })
-})
-
-/**
- * Test data validator
- */
-describe('parameter Validation Test', () => {
-  it('should handle parameter validation', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
-    })
-
-    server.addValidation('users', {
-      name: Joi.string().required(),
-      email: Joi.string().email(),
-    })
-
-    await server.start()
-
-    const app = server.getApp()
-    const response = await request(app)
-      .post('/api/users')
-      .send({
-        email: 'invalid-email',
+      customServer.addCustomRoute('get', '/custom', (_, res) => {
+        res.json({ message: 'Custom route' })
       })
-      .expect(400)
 
-    expect(response.body.error).toBeTruthy()
-  })
-})
+      await customServer.start()
 
-/**
- * Test custom route
- */
-describe('custom route Test', () => {
-  it('should handle custom route', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
+      const customApp = customServer.getApp()
+      const response = await request(customApp)
+        .get('/api/custom')
+        .expect(200)
+
+      expect(response.body.message).toBe('Custom route')
     })
+  })
 
-    server.addCustomRoute('get', '/comments/:id', (req, res) => {
-      res.status(200).json({
-        message: 'Custom route response',
+  /**
+   * Test middleware
+   */
+  describe('middleware', () => {
+    let middlewareServer: MockServer
+    let middlewareApp: e.Express
+    const middlewareDbStoragePath = new URL(`./data-${getRandomString()}.json`, import.meta.url).pathname
+      
+
+    beforeEach(async () => {
+      middlewareServer = new MockServer({
+        port: getRandomPort(),
+        dbStoragePath: middlewareDbStoragePath,
+        dbModelPath: new URL('./models.ts', import.meta.url).pathname,
+        prefix: '/api',
       })
+      middlewareApp = middlewareServer.getApp()
     })
 
-    await server.start()
-
-    const app = server.getApp()
-    const response = await request(app)
-      .get('/api/comments/1')
-      .expect(200)
-
-    expect(response.body.message).toBe('Custom route response')
-  })
-})
-
-/**
- * Test middleware
- */
-describe('middleware Test', () => {
-  it('should handle pre middleware', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
+    afterEach(async () => {
+      await rm(middlewareDbStoragePath)
     })
 
-    server.pre((req, _, next) => {
-      req.query.page_size = '1'
-      next()
-    })
+    it('should handle pre middleware', async () => {
 
-    await server.start()
-
-    const app = server.getApp()
-    const response = await request(app)
-      .get('/api/users')
-      .expect(200)
-
-    expect(response.body.data.length).toBe(1)
-  })
-
-  it('should handle post middleware', async () => {
-    const server = new MockServer({
-      port: getRandomPort(),
-      dbPath: new URL('./fixtures/db.json', import.meta.url).pathname,
-      prefix: '/api',
-    })
-
-    server.post((req, res) => {
-      res.status(200).json({
-        message: 'Middleware response',
-        data: [
-          {
-            id: 1,
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-          },
-        ],
+      middlewareServer.pre((req, _, next) => {
+        req.query.page_size = '1'
+        next()
       })
+
+      await middlewareServer.start()
+
+      await request(middlewareApp)
+        .post('/api/users')
+        .send({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+        })
+
+      await request(middlewareApp)
+        .post('/api/users')
+        .send({
+          name: 'Jane Doe',
+          email: 'jane.doe@example.com',
+        })
+
+      const response = await request(middlewareApp)
+        .get('/api/users')
+        .expect(200)
+
+      expect(response.body.data.length).toBe(1)
     })
 
-    await server.start()
+    it('should handle post middleware', async () => {
+      middlewareServer.post((req, res) => {
+        res.status(200).json({
+          message: 'Middleware response',
+          data: [
+            {
+              id: 1,
+              name: 'John Doe',
+              email: 'john.doe@example.com',
+            },
+          ],
+        })
+      })
 
-    const app = server.getApp()
-    const response = await request(app)
-      .post('/api/users')
-      .expect(200)
+      await middlewareServer.start()
 
-    expect(response.body.data).toBeTruthy()
+      const response = await request(middlewareApp)
+        .get('/api/users')
+        .expect(200)
+
+      expect(response.body.data).toBeTruthy()
+    })
+  })
+
+  /**
+   * Test auth
+   */
+  describe('auth', () => {
+    let authServer: MockServer
+    let authApp: e.Express
+    const authDbStoragePath = new URL(`./data-${getRandomString()}.json`, import.meta.url).pathname
+
+    beforeEach(async () => {
+      authServer = new MockServer({
+        port: getRandomPort(),
+        dbStoragePath: authDbStoragePath,
+        dbModelPath: new URL('./models.ts', import.meta.url).pathname,
+        prefix: '/api',
+        auth: {
+          enabled: true,
+          secret: 'test-secret',
+        },
+      })
+      await authServer.start()
+      authApp = authServer.getApp()
+    })
+
+    afterEach(async () => {
+      await rm(authDbStoragePath)
+    })
+
+    it('should handle token validation', async () => {
+      await request(authApp)
+        .post('/api/users')
+        .send({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+        })
+        .expect(401)
+    })
+
+    it('should handle token validation with valid token', async () => {
+      const response = await request(authApp)
+        .post('/api/users')
+        .send({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+        })
+        .set('Authorization', `Bearer ${authServer.generateToken({ id: 1, name: 'John Doe' })}`)
+        .expect(200)
+
+      expect(response.body.data).toBeTruthy()
+    })
   })
 })

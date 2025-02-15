@@ -1,14 +1,16 @@
 import type { Request } from 'express'
 import type Joi from 'joi'
 import type jwt from 'jsonwebtoken'
+import type { Collection } from './db'
 
 export interface Config {
   port: number
   delay?: number
   prefix?: string
-  dbPath?: string
-  apiPath?: string
+  dbStoragePath: string
+  dbModelPath: string
   auth?: AuthConfig
+  onSave?: () => Promise<void>
 }
 
 export interface AuthConfig {
@@ -44,4 +46,8 @@ export interface PaginatedResponse<T> {
     per_page: number
     total_pages: number
   }
+}
+
+export interface DatabaseData {
+  [key: string]: Collection
 }

@@ -2,7 +2,7 @@ import Joi from 'joi'
 import { describe, expect, it } from 'vitest'
 import Validator from '../src/validator'
 
-describe('validator Test', () => {
+describe('validator test', () => {
   it('should add and validate schema', () => {
     const validator = new Validator()
 

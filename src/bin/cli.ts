@@ -2,7 +2,7 @@
 
 import type { Config } from '../types'
 import { readFileSync } from 'node:fs'
-import path, { dirname, join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import chalk from 'chalk'
 import { program } from 'commander'
@@ -13,25 +13,19 @@ const packageJson = JSON.parse(readFileSync(join(__dirname, '../../package.json'
 
 program
   .version(packageJson.version)
-  .option('-p, --port <port>', '设置服务器端口', '3000')
-  .option('-d, --delay <ms>', '设置响应延迟', '0')
-  .option('--db <path>', '指定db.json文件路径')
-  .option('--api <path>', '指定API文件夹路径')
+  .option('-p, --port <port>', 'Set server port', '3000')
+  .option('-d, --delay <ms>', 'Set response delay', '0')
+  .option('--db-storage-path <path>', 'Set db storage file path')
+  .option('--db-model-path <path>', 'Set db models file or folder path')
   .parse(process.argv)
 
 const options = program.opts()
 
-const config: Partial<Config> = {
+const config: Config = {
   port: Number.parseInt(options.port),
   delay: Number.parseInt(options.delay),
-}
-
-if (options.db) {
-  config.dbPath = path.resolve(process.cwd(), options.db)
-}
-
-if (options.api) {
-  config.apiPath = path.resolve(process.cwd(), options.api)
+  dbStoragePath: options.dbStoragePath,
+  dbModelPath: options.dbModelPath,
 }
 
 const server = new MockServer(config)
