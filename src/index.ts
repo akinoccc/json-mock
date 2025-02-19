@@ -1,5 +1,4 @@
 import type { Express, NextFunction, Request, Response } from 'express'
-import type e from 'express'
 import type {
   AuthenticatedRequest,
   Config,
@@ -400,5 +399,8 @@ class MockServer {
     return this.auth.generateToken(payload)
   }
 }
+
+export * from './db'
+export * from './types'
 
 export default MockServer

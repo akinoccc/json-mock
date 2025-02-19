@@ -1,2 +1,6 @@
-export { Collection } from './Collection'
-export { JsonDB } from './JsonDB'
+export * from './Collection'
+export * from './decorators'
+export * from './JsonDB'
+export * from './ModelManager'
+export * from './ModelScanner'
+export * from './Validator'
