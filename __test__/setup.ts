@@ -1,15 +1,4 @@
-import type Service from '../src/service'
-import fs from 'node:fs'
-import path from 'node:path'
-import { afterAll, beforeAll } from 'vitest'
-
-const aggregatedDbPath = path.join(__dirname, 'fixtures/db.json')
-const userDbPath = path.join(__dirname, 'fixtures/api/users.json')
-const postDbPath = path.join(__dirname, 'fixtures/api/posts.json')
-
-let aggregatedConfig: Service
-let userConfig: Service
-let postConfig: Service
+import { beforeAll } from 'vitest'
 
 beforeAll(async () => {
   // // 创建测试数据

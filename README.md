@@ -1,4 +1,4 @@
-# Json Mock
+# Jsonx Mock
 
 A flexible and feature-rich mock server built with Express.js for rapid API development and testing.
 
@@ -15,11 +15,11 @@ A flexible and feature-rich mock server built with Express.js for rapid API deve
 - 🔍 Query parameter filtering
 
 ```bash
-pnpm i json-mock@latest
+pnpm i jsonx-mock@latest
 ```
 
 ```typescript
-import MockServer from 'express-mock-server'
+import MockServer from 'jsonx-mock'
 const server = new MockServer({
   port: 3000,
   dbPath: './db.json'

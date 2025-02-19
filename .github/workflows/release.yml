@@ -1,0 +1,52 @@
+name: Release
+on:
+  push:
+    branches:
+      - main
+      - rc
+      - beta
+      - alpha
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Using pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.3.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_EMAIL: bot
+          GIT_AUTHOR_NAME: release-bot
+          GIT_COMMITTER_EMAIL: akinochen@gmail.com
+          GIT_COMMITTER_NAME: bot
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm release

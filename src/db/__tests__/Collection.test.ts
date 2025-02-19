@@ -12,7 +12,7 @@ describe('collection', () => {
     collection = new Collection(testData, saveCallback)
   })
 
-  describe('Basic CRUD operations', () => {
+  describe('basic curd operations', () => {
     it('should insert a document', () => {
       collection.insert({ name: '张三', age: 25 })
       expect(testData).toHaveLength(1)
@@ -56,7 +56,7 @@ describe('collection', () => {
     })
   })
 
-  describe('Query operators', () => {
+  describe('query operators', () => {
     beforeEach(() => {
       collection.insertMany([
         { name: '张三', age: 25, tags: ['开发', '前端'] },
@@ -123,7 +123,7 @@ describe('collection', () => {
     })
   })
 
-  describe('Aggregation operations', () => {
+  describe('aggregation operations', () => {
     beforeEach(() => {
       collection.insertMany([
         { name: '张三', age: 25, role: 'dev' },

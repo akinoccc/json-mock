@@ -1,7 +1,10 @@
 import type { JsonDB } from './JsonDB'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import { exit } from 'node:process'
+
 import { glob } from 'glob'
+import { loadConfig } from 'unconfig'
 
 export class ModelScanner {
   private db: JsonDB
@@ -46,17 +49,29 @@ export class ModelScanner {
 
   private async loadModelFile(fullPath: string) {
     try {
-      const module = await import(fullPath)
+      // const module = await import(fullPath)
+      const { config: module } = await loadConfig({
+        sources: [
+
+          {
+            files: fullPath,
+            // default extensions
+            extensions: [''],
+            parser: 'import',
+          },
+        ],
+      })
 
       // 遍历模块中的所有导出
-      for (const exportedItem of Object.values(module)) {
+      for (const exportedItem of Object.values(module as object)) {
         if (this.isModelClass(exportedItem)) {
           this.db.registerModel(exportedItem)
         }
       }
     }
     catch (error) {
-      console.error(`加载模型文件失败: ${fullPath}`, error)
+      console.error(`Load model failed: ${fullPath}`, error)
+      exit(1)
     }
   }
 

@@ -1,9 +1,9 @@
 import { readFileSync, writeFileSync } from 'node:fs'
+import { rm } from 'node:fs/promises'
 import path from 'node:path'
 import { Collection } from './Collection'
 import { ModelManager } from './ModelManager'
 import { ModelScanner } from './ModelScanner'
-import { rm } from 'node:fs/promises'
 
 export class JsonDB {
   private data: any = {}
@@ -28,7 +28,7 @@ export class JsonDB {
       const content = readFileSync(this.dbFilePath, 'utf-8')
       this.data = JSON.parse(content)
     }
-    catch (error) {
+    catch {
       this.data = {}
       this.saveData()
     }

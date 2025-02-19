@@ -5,6 +5,11 @@ export default antfu({
 }, {
   files: ['src/**/*.ts'],
   rules: {},
+}, {
+  files: ['release.config.mjs'],
+  rules: {
+    'no-template-curly-in-string': 'off',
+  },
 }).overrideRules({
   'no-console': 'off',
   'node/prefer-global/process': 'off',

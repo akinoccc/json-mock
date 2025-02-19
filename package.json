@@ -1,5 +1,5 @@
 {
-  "name": "json-mock",
+  "name": "jsonx-mock",
   "type": "module",
   "version": "1.0.0",
   "description": "A mock server with json data",
@@ -8,19 +8,41 @@
     "email": "akinochen@foxmail.com"
   },
   "license": "Apache-2.0",
-  "keywords": [],
-  "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akinoccc/jsonx-mock.git"
+  },
+  "keywords": [
+    "json",
+    "mock",
+    "server",
+    "test",
+    "api"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
   "types": "dist/index.d.ts",
   "bin": {
-    "json-mock": "./dist/bin/cli.js"
+    "json-mock": "./dist/bin/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
-    "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc",
+    "dev": "unbuild --stub",
+    "build": "unbuild",
     "test": "vitest",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "release": "semantic-release"
   },
   "dependencies": {
     "@types/body-parser": "^1.19.5",
@@ -32,12 +54,13 @@
     "glob": "^11.0.1",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
-    "lodash": "^4.17.21",
-    "lowdb": "^7.0.1",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "unconfig": "^7.0.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.2.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@sindresorhus/tsconfig": "^7.0.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -48,9 +71,10 @@
     "@types/supertest": "^6.0.2",
     "eslint": "^9.20.1",
     "nodemon": "^3.1.9",
+    "semantic-release": "^24.2.3",
     "supertest": "^6.3.3",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
+    "unbuild": "^3.3.1",
     "vitest": "^3.0.5"
   }
 }

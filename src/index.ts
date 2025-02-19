@@ -1,4 +1,5 @@
 import type { Express, NextFunction, Request, Response } from 'express'
+import type e from 'express'
 import type {
   AuthenticatedRequest,
   Config,
@@ -6,8 +7,8 @@ import type {
   QueryParams,
   ValidationSchema,
 } from './types'
-import path from 'node:path'
 import bodyParser from 'body-parser'
+import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
 import Auth from './auth'
@@ -94,15 +95,40 @@ class MockServer {
    * @returns void
    */
   public async start(): Promise<void> {
+    console.log(chalk.cyan('\n=== Initializing server ===\n'))
     await this.configManager.initialize()
+    console.log(chalk.green('✓ Config manager initialized'))
+
     this.setupMiddlewares()
+    console.log(chalk.green('✓ Middlewares set'))
 
     this.middlewares.pre.forEach(middleware => this.app.use(middleware))
     this.setupRoutes()
     this.middlewares.post.forEach(middleware => this.app.use(middleware))
+    console.log(chalk.green('✓ Routes set'))
 
     this.app.listen(this.config.port, () => {
-      console.log(`Mock server is running on port ${this.config.port}`)
+      console.log(chalk.cyan('\n=== Server information ===\n'))
+      console.log(chalk.green(`✓ Server running on port: ${chalk.yellow(this.config.port)}`))
+      console.log(chalk.green(`✓ API prefix: ${chalk.yellow(this.config.prefix || '/')}`))
+      console.log(chalk.green(`✓ Response delay: ${chalk.yellow(this.config.delay || 0)} ms`))
+      console.log(chalk.green(`✓ Authentication status: ${this.config.auth?.enabled ? chalk.green('Enabled') : chalk.red('Disabled')}\n`))
+
+      // 打印所有路由信息
+      console.log(chalk.cyan('\n=== Registered Routes ===\n'))
+      this.app._router.stack.forEach((r: any) => {
+        if (r.route && r.route.path) {
+          const methods = Object.keys(r.route.methods)
+            .filter(method => method !== '_all')
+            .map(method => chalk.yellow(method.toUpperCase()))
+            .join(', ')
+
+          console.log(
+            `${chalk.green('→')} ${methods} ${chalk.blue(r.route.path)}`,
+          )
+        }
+      })
+      console.log(chalk.cyan('\n=========================\n'))
     })
   }
 
@@ -119,7 +145,7 @@ class MockServer {
    * @returns void
    */
   private setupRoutes(): void {
-    const prefix = this.config.prefix
+    const prefix = this.config.prefix || ''
 
     this.app.get(`${prefix}/:resource`, this.handleGetList.bind(this))
     this.app.get(`${prefix}/:resource/:id`, this.handleGetOne.bind(this))
@@ -137,8 +163,12 @@ class MockServer {
     const { resource } = req.params
     const { current_page = 1, page_size = 10, ...query } = req.query as QueryParams
 
+    console.log(chalk.cyan(`\n[GET] ${resource} list request`))
+    console.log(chalk.gray(`Parameters: ${JSON.stringify({ current_page, page_size, ...query }, null, 2)}`))
+
     const db = this.configManager.getDatabase()
     if (!db) {
+      console.log(chalk.red('✗ Database not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -180,12 +210,14 @@ class MockServer {
     const { resource, id } = req.params
     const db = this.configManager.getDatabase()
     if (!db) {
+      console.log(chalk.red('Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const item = db.getModel(resource)?.findById(id)
     if (!item) {
+      console.log(chalk.red('Not found'))
       res.status(404).json({ error: 'Not found' })
       return
     }
@@ -200,14 +232,21 @@ class MockServer {
    */
   private async handlePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource } = req.params
+
+    console.log(chalk.cyan(`\n[POST] Create ${resource}`))
+    console.log(chalk.gray(`Data: ${JSON.stringify(req.body, null, 2)}`))
+
     const db = this.configManager.getDatabase()
     if (!db) {
+      console.log(chalk.red('✗ Database not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const { error, value } = this.validator.validate(resource, req.body)
     if (error) {
+      console.log(chalk.red('✗ Validation error'))
+      console.log(chalk.red(error.details.map(detail => detail.message).join('\n')))
       res.status(400).json({
         error: 'Validation error',
         details: error.details.map(detail => detail.message),
@@ -217,6 +256,7 @@ class MockServer {
 
     const collection = db.getModel(resource)
     if (!collection) {
+      console.log(chalk.red('Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -241,8 +281,13 @@ class MockServer {
    */
   private async handlePut(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource, id } = req.params
+
+    console.log(chalk.cyan(`\n[PUT] Update ${resource}/${id}`))
+    console.log(chalk.gray(`Data: ${JSON.stringify(req.body, null, 2)}`))
+
     const db = this.configManager.getDatabase()
     if (!db) {
+      console.log(chalk.red('Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -258,6 +303,7 @@ class MockServer {
 
     const collection = db.getModel(resource)
     if (!collection) {
+      console.log(chalk.red('Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -274,25 +320,32 @@ class MockServer {
    */
   private async handleDelete(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource, id } = req.params
+
+    console.log(chalk.cyan(`\n[DELETE] Delete ${resource}/${id}`))
+
     const db = this.configManager.getDatabase()
     if (!db) {
+      console.log(chalk.red('Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const collection = db.getModel(resource)
     if (!collection) {
+      console.log(chalk.red('Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const item = collection.findById(id)
     if (!item) {
+      console.log(chalk.red('Not found'))
       res.status(404).json({ error: 'Not found' })
       return
     }
 
     if (this.config.auth?.enabled && item.createdBy !== req.user?.id) {
+      console.log(chalk.red('Permission denied'))
       res.status(403).json({ error: 'Permission denied' })
       return
     }

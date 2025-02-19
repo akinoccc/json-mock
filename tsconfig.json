@@ -15,6 +15,7 @@
     "resolveJsonModule": true,
     "types": ["vitest/globals"],
     "strict": true,
+    "strictPropertyInitialization": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
@@ -22,13 +23,12 @@
     "noUnusedParameters": false,
     "declaration": true,
     "newLine": "lf",
-    "outDir": "./dist",
     "stripInternal": true,
     "skipLibCheck": true
   },
   "include": [
     "src/**/*",
-    "test/**/*",
+    "__test__/**/*",
     "eslint.config.mjs"
   ]
 }
