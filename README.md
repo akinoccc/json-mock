@@ -7,7 +7,7 @@ A TypeScript-based Mock REST API Server with integrated authentication and valid
 - 🚀 **Auto-generated REST endpoints**
 - 🔒 **JWT Authentication middleware**
 - ✅ **Data validation** with Joi schemas
-- ⚡ **Zero-config CLI support**
+- ⚡ **Dual usage mode** (CLI & Programmatic)
 - 📊 **Built-in pagination**
 - ⏱️ **Configurable response delays**
 - 🛠️ **Custom route support**
@@ -22,11 +22,28 @@ yarn add jsonx-mock -D
 pnpm add jsonx-mock -D
 ```
 
-## Quick Start
+## CLI Usage
 
-1. Create basic configuration (`mock.config.{ts,mts,cts,js,mjs,cjs,json}`):
+### Quick Start
+```bash
+jsonx-mock --port 3000 --db-storage ./data/db.json --db-model ./models
+```
+
+### Command Options
+| Option               | Description                          | Default Value     |
+|----------------------|--------------------------------------|-------------------|
+| `-p, --port <port>`  | Set server port                      | 3000              |
+| `-d, --delay <ms>`   | Add response delay in milliseconds   | 0                 |
+| `--db-storage <path>`| Path to database storage file        | Required          |
+| `--db-model <path>`  | Path to model definitions directory  | Required          |
+| `--help`             | Show help menu                       | -                 |
+
+### Configuration File
+
+Supports multiple configuration file formats (loaded by priority):
 
 ```ts
+// mock.config.ts
 export default {
   port: 3000,
   dbStoragePath: './data/db.json',
@@ -39,50 +56,27 @@ export default {
 }
 ```
 
-2. Start the server:
+## Programmatic Usage
 
-```bash
-jsonx-mock --port 3000
-```
+### Basic Setup
 
-## Core Functionality
-
-### Auto-generated Endpoints
-The server automatically creates RESTful endpoints for your resources:
-
-| Method | Endpoint              | Description          |
-|--------|-----------------------|----------------------|
-| GET    | /api/:resource       | List resources       |
-| GET    | /api/:resource/:id   | Get single resource  |
-| POST   | /api/:resource       | Create resource      |
-| PUT    | /api/:resource/:id   | Update resource      |
-| DELETE | /api/:resource/:id   | Delete resource      |
-
-### Authentication Setup
 ```ts
-// Generate JWT token
-app.post('/login', (req, res) => {
-  const token = server.generateToken({ userId: 123 })
-  res.json({ token })
+import MockServer from 'jsonx-mock'
+
+const server = new MockServer({
+  port: 3000,
+  dbStoragePath: './data/db.json',
+  dbModelPath: './models',
+  auth: {
+    enabled: true,
+    secret: 'your-secret-key'
+  }
 })
 
-// Protected endpoint
-app.get('/profile', (req, res) => {
-  const user = req.user // From JWT
-  res.json(user)
-})
+server.start()
 ```
 
-### Data Validation
-```ts
-server.addValidation('users', {
-  name: Joi.string().required(),
-  email: Joi.string().email().required(),
-  age: Joi.number().min(18)
-})
-```
-
-## Configuration Options
+### Advanced Configuration
 
 ```ts
 interface Config {
@@ -100,40 +94,55 @@ interface Config {
 }
 ```
 
-## CLI Usage
-
-```bash
-mock-server [options]
-
-Options:
-  -p, --port <port>        Set server port (default: 3000)
-  -d, --delay <ms>         Add response delay in milliseconds
-  --db-storage <path>      Path to database storage file
-  --db-model <path>        Path to model definitions
-  --help                   Show help
-```
-
-## Advanced Features
-
-### Custom Routes
+### Custom Extensions
 ```ts
-server.addCustomRoute('get', '/health', (req, res) => {
-  res.json({ status: 'ok' })
+// Add validation rules
+server.addValidation('users', {
+  name: Joi.string().required(),
+  email: Joi.string().email().required()
 })
-```
 
-### Middleware Hooks
-```ts
-// Pre-processing middleware
+// Add custom routes
+server.addCustomRoute('get', '/system/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() })
+})
+
+// Add middleware
 server.pre((req, res, next) => {
-  console.log('Request received:', req.method, req.path)
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
   next()
 })
+```
 
-// Post-processing middleware
-server.post((req, res, next) => {
-  console.log('Response sent:', res.statusCode)
-  next()
+## Core Functionality
+
+### Auto-generated Endpoints
+| Method | Endpoint              | Description          |
+|--------|-----------------------|----------------------|
+| GET    | /api/:resource       | List resources       |
+| GET    | /api/:resource/:id   | Get single resource  |
+| POST   | /api/:resource       | Create resource      |
+| PUT    | /api/:resource/:id   | Update resource      |
+| DELETE | /api/:resource/:id   | Delete resource      |
+
+### Authentication Flow
+```ts
+// Generate access token
+app.post('/auth/login', (req, res) => {
+  const token = server.generateToken({
+    userId: 123,
+    role: 'admin'
+  })
+  res.json({ token })
+})
+
+// Protected endpoint example
+app.get('/user/profile', (req, res) => {
+  const user = req.user // Parsed from JWT
+  res.json({
+    id: user.id,
+    name: 'Test User'
+  })
 })
 ```
 
