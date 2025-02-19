@@ -1,129 +1,141 @@
 # Jsonx Mock
 
-A flexible and feature-rich mock server built with Express.js for rapid API development and testing.
+A TypeScript-based Mock REST API Server with integrated authentication and validation. Perfect for rapid API prototyping and development.
 
 ## Features
 
-- 🚀 Quick setup with minimal configuration
-- 📦 Support for JSON file-based data storage
-- 🔒 Built-in authentication support
-- ✨ Request validation using Joi
-- 📝 Automatic CRUD endpoints
-- 🎯 Custom route support
-- ⏱️ Configurable response delays
-- 📄 Pagination support
-- 🔍 Query parameter filtering
+- 🚀 **Auto-generated REST endpoints**
+- 🔒 **JWT Authentication middleware**
+- ✅ **Data validation** with Joi schemas
+- ⚡ **Zero-config CLI support**
+- 📊 **Built-in pagination**
+- ⏱️ **Configurable response delays**
+- 🛠️ **Custom route support**
+
+## Installation
 
 ```bash
-pnpm i jsonx-mock@latest
+npm install jsonx-mock --save-dev
+# or
+yarn add jsonx-mock -D
+# or
+pnpm add jsonx-mock -D
 ```
 
-```typescript
-import MockServer from 'jsonx-mock'
-const server = new MockServer({
+## Quick Start
+
+1. Create basic configuration (`mock.config.{ts,mts,cts,js,mjs,cjs,json}`):
+
+```ts
+export default {
   port: 3000,
-  dbPath: './db.json'
-})
-server.start()
-```
-
-```bash
-json-mock --port 3000 --db ./db.json
-```
-
-Options:
-- `-p, --port`: Set server port (default: 3000)
-- `-d, --delay`: Set response delay in milliseconds
-- `--db`: Specify db.json file path
-- `--api`: Specify API folder path
-
-## Configuration
-
-```typescript
-const config = {
-  port: 3000,
-  delay: 1000,
-  prefix: '/api',
-  dbPath: './db.json',
+  dbStoragePath: './data/db.json',
+  dbModelPath: './models',
   auth: {
     enabled: true,
     secret: 'your-secret-key',
-    expiresIn: '1h',
-    excludePaths: ['/api/login']
+    expiresIn: '1h'
   }
 }
-const server = new MockServer(config)
 ```
 
-## Authentication
+2. Start the server:
 
-Enable authentication with JWT:
+```bash
+jsonx-mock --port 3000
+```
 
-```typescript
-const server = new MockServer({
-  auth: {
-    enabled: true,
-    secret: 'your-secret-key'
-  }
+## Core Functionality
+
+### Auto-generated Endpoints
+The server automatically creates RESTful endpoints for your resources:
+
+| Method | Endpoint              | Description          |
+|--------|-----------------------|----------------------|
+| GET    | /api/:resource       | List resources       |
+| GET    | /api/:resource/:id   | Get single resource  |
+| POST   | /api/:resource       | Create resource      |
+| PUT    | /api/:resource/:id   | Update resource      |
+| DELETE | /api/:resource/:id   | Delete resource      |
+
+### Authentication Setup
+```ts
+// Generate JWT token
+app.post('/login', (req, res) => {
+  const token = server.generateToken({ userId: 123 })
+  res.json({ token })
 })
-// Generate token
-const token = server.generateToken({ userId: 1 })
+
+// Protected endpoint
+app.get('/profile', (req, res) => {
+  const user = req.user // From JWT
+  res.json(user)
+})
 ```
 
-## Validation
-
-Add validation schemas for your resources:
-
-```typescript
-import Joi from 'joi'
+### Data Validation
+```ts
 server.addValidation('users', {
   name: Joi.string().required(),
   email: Joi.string().email().required(),
-  age: Joi.number().min(0)
+  age: Joi.number().min(18)
 })
 ```
 
-## Custom Routes
+## Configuration Options
 
-Add custom routes to handle specific cases:
+```ts
+interface Config {
+  port?: number // Server port (default: 3000)
+  delay?: number // Response delay in milliseconds
+  prefix?: string // API path prefix
+  dbStoragePath: string // Path to database storage file
+  dbModelPath: string // Path to model definitions
+  auth?: {
+    enabled: boolean // Enable JWT authentication
+    secret: string // JWT signing secret
+    expiresIn?: string // Token expiration time
+    excludePaths?: string[]// Public endpoints
+  }
+}
+```
 
-```typescript
-server.addCustomRoute('get', '/custom', (req, res) => {
-  res.json({ message: 'Custom route response' })
+## CLI Usage
+
+```bash
+mock-server [options]
+
+Options:
+  -p, --port <port>        Set server port (default: 3000)
+  -d, --delay <ms>         Add response delay in milliseconds
+  --db-storage <path>      Path to database storage file
+  --db-model <path>        Path to model definitions
+  --help                   Show help
+```
+
+## Advanced Features
+
+### Custom Routes
+```ts
+server.addCustomRoute('get', '/health', (req, res) => {
+  res.json({ status: 'ok' })
 })
 ```
 
-## Middleware Support
-
-Add pre and post processing middleware:
-
-```typescript
+### Middleware Hooks
+```ts
+// Pre-processing middleware
 server.pre((req, res, next) => {
-  console.log('Pre-processing middleware')
+  console.log('Request received:', req.method, req.path)
   next()
 })
+
+// Post-processing middleware
 server.post((req, res, next) => {
-  console.log('Post-processing middleware')
+  console.log('Response sent:', res.statusCode)
   next()
 })
 ```
-
-## API Endpoints
-
-The server automatically creates the following REST endpoints:
-
-- `GET /:resource` - Get a list of resources
-- `GET /:resource/:id` - Get a single resource
-- `POST /:resource` - Create a new resource
-- `PUT /:resource/:id` - Update a resource
-- `DELETE /:resource/:id` - Delete a resource
-
-### Query Parameters
-
-List endpoints support the following query parameters:
-- `current_page`: Page number for pagination
-- `page_size`: Number of items per page
-- Any other field name for filtering
 
 ## License
 
