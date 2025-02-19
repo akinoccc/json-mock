@@ -1,3 +1,10 @@
+## [1.0.1-beta.1](https://github.com/akinoccc/jsonx-mock/compare/v1.0.0...v1.0.1-beta.1) (2025-02-19)
+
+
+### Bug Fixes
+
+* missing export functions ([7362efd](https://github.com/akinoccc/jsonx-mock/commit/7362efd629d4e9b49e73a97a36960e26e0871278))
+
 # 1.0.0 (2025-02-19)
 
 
