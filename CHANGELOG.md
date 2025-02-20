@@ -1,3 +1,11 @@
+## [1.0.1-beta.2](https://github.com/akinoccc/jsonx-mock/compare/v1.0.1-beta.1...v1.0.1-beta.2) (2025-02-20)
+
+
+### Bug Fixes
+
+* **config:** cannot override config of port and delay ([fb6ff1c](https://github.com/akinoccc/jsonx-mock/commit/fb6ff1c4a2841e1dc6abd94e5ad95da5747e7811))
+* typedef issue ([00852cc](https://github.com/akinoccc/jsonx-mock/commit/00852ccf2f26b0b81ee0fac4e8b449cc1d59a9fd))
+
 ## [1.0.1-beta.1](https://github.com/akinoccc/jsonx-mock/compare/v1.0.0...v1.0.1-beta.1) (2025-02-19)
 
 
