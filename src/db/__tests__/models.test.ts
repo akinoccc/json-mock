@@ -50,7 +50,9 @@ describe('model system', () => {
 
   afterEach(async () => {
     // Clean up the database file after each test
-    await rm(dbPath).catch(() => {})
+    await rm(dbPath).catch((err) => {
+      console.error(err)
+    })
   })
 
   describe('model registration', () => {

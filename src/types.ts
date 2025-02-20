@@ -1,7 +1,10 @@
 import type { Request } from 'express'
 import type Joi from 'joi'
 import type jwt from 'jsonwebtoken'
+import type { LogLevelDesc } from 'loglevel'
 import type { Collection } from './db'
+
+export type { LogLevelDesc }
 
 export interface Config {
   port: number
@@ -11,6 +14,7 @@ export interface Config {
   dbModelPath: string
   auth?: AuthConfig
   onSave?: () => Promise<void>
+  logLevel?: LogLevelDesc
 }
 
 export interface AuthConfig {
