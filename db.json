@@ -1,4 +1,11 @@
 {
   "posts": [],
-  "users": []
+  "users": [{
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password123",
+    "createdAt": "2024-01-01",
+    "updatedAt": "2024-01-01"
+  }]
 }
