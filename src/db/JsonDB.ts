@@ -87,7 +87,7 @@ export class JsonDB {
       await rm(this.dbFilePath)
       logger.info(chalk`{green ✔ 数据库清空成功} {gray 已删除文件: ${this.dbFilePath}}`)
     }
-    catch (error) {
+    catch (error: any) {
       logger.error(chalk`{red ✗ 数据库清空失败!} {gray 原因:} {white ${error.message}}`)
       throw error
     }
