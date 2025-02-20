@@ -6,6 +6,7 @@ export interface ValidationRule {
   pattern?: RegExp
   enum?: any[]
   custom?: (value: any) => boolean | string
+  filterable?: boolean
 }
 
 export interface SchemaDefinition {
@@ -17,6 +18,10 @@ export class Validator {
 
   constructor(schema: SchemaDefinition) {
     this.schema = schema
+  }
+
+  getSchema(): SchemaDefinition {
+    return this.schema
   }
 
   validate(data: any): { isValid: boolean, errors: string[] } {

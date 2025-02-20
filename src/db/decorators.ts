@@ -39,4 +39,5 @@ export interface FieldOptions {
   unique?: boolean
   index?: boolean
   ref?: string
+  filterable?: boolean
 }
