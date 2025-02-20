@@ -1,3 +1,10 @@
+# [1.1.0-beta.1](https://github.com/akinoccc/jsonx-mock/compare/v1.0.1-beta.2...v1.1.0-beta.1) (2025-02-20)
+
+
+### Features
+
+* **db:** add white list for querying data ([dc4b250](https://github.com/akinoccc/jsonx-mock/commit/dc4b250bfbded0215a5233e99646ba5652779288))
+
 ## [1.0.1-beta.2](https://github.com/akinoccc/jsonx-mock/compare/v1.0.1-beta.1...v1.0.1-beta.2) (2025-02-20)
 
 
