@@ -6,22 +6,25 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { program } from 'commander'
 import { loadConfig } from 'unconfig'
+import chalk from 'chalk'
 
 import MockServer from '../index'
+import { createLogger } from '../logger'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf-8'))
 
 program
   .version(packageJson.version)
-  .option('-p, --port <port>', 'Set server port', '3000')
-  .option('-d, --delay <ms>', 'Set response delay', '0')
+  .option('-p, --port <port>', 'Set server port')
+  .option('-d, --delay <ms>', 'Set response delay')
   .option('--db-storage <path>', 'Set db storage file path')
   .option('--db-model <path>', 'Set db models file or folder path')
   .parse(process.argv)
 
 const options = program.opts()
 
+const logger = createLogger('CLI')
 // Try to load config files with different formats by priority
 async function loadConfigFile() {
   try {
@@ -48,13 +51,15 @@ async function loadConfigFile() {
     })
     return config
   }
-  catch (e) {
-    console.error('Load config file error', e)
+  catch (e: any) {
+    logger.error(chalk`{red ▶ 配置文件加载失败!}\n{gray 错误详情:} {white ${e.message}}`)
     process.exit(1)
   }
 }
 
 const configFromFile = await loadConfigFile()
+
+console.log(configFromFile)
 
 const config: Config = {
   port: Number.parseInt(options.port || configFromFile.port),

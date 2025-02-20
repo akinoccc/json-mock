@@ -1,5 +1,5 @@
 export default {
-  port: 5000,
+  port: 10030,
   dbStorage: './db.json',
   dbModel: './__test__/models.ts',
 }

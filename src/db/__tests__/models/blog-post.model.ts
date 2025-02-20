@@ -4,10 +4,10 @@ import { AutoIncrement, Field, Model } from '../../decorators'
 export class BlogPost {
   @AutoIncrement()
   @Field({ type: 'number' })
-  id!: number
+  id?: number
 
   @Field({ type: 'string', required: true })
-  title!: string
+  title?: string
 
   @Field({ type: 'string' })
   content?: string

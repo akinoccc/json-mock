@@ -1,4 +1,5 @@
 import type { Express, NextFunction, Request, Response } from 'express'
+import type log from 'loglevel'
 import type {
   AuthenticatedRequest,
   Config,
@@ -11,6 +12,7 @@ import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
 import Auth from './auth'
+import { createLogger, logger } from './logger'
 import Service from './service'
 import Validator from './validator'
 
@@ -24,6 +26,8 @@ class MockServer {
     pre: Array<(req: Request, res: Response, next: NextFunction) => void>
     post: Array<(req: Request, res: Response, next: NextFunction) => void>
   }
+
+  private logger: log.Logger
 
   /**
    * @description Initialize the mock server
@@ -47,6 +51,8 @@ class MockServer {
       pre: [],
       post: [],
     }
+    this.logger = createLogger('Server')
+    this.logger.setLevel(config.logLevel || 'info')
   }
 
   /**
@@ -94,40 +100,30 @@ class MockServer {
    * @returns void
    */
   public async start(): Promise<void> {
-    console.log(chalk.cyan('\n=== Initializing server ===\n'))
+    this.logger.info(chalk.hex('#00BFFF')(`\n┌${'─'.repeat(40)}`))
+    this.logger.info(chalk.hex('#00BFFF').bold('│ Mock Server 启动中...'))
+    this.logger.info(chalk.hex('#00BFFF')(`└${'─'.repeat(40)}\n`))
+
     await this.configManager.initialize()
-    console.log(chalk.green('✓ Config manager initialized'))
+    this.logger.debug(chalk`{gray ▶ 配置管理器初始化完成}`)
 
     this.setupMiddlewares()
-    console.log(chalk.green('✓ Middlewares set'))
+    this.logger.debug(chalk`{gray ▶ 中间件加载完成 (共 ${this.middlewares.pre.length + this.middlewares.post.length} 个)}`)
 
     this.middlewares.pre.forEach(middleware => this.app.use(middleware))
     this.setupRoutes()
     this.middlewares.post.forEach(middleware => this.app.use(middleware))
-    console.log(chalk.green('✓ Routes set'))
+    this.logger.info(chalk.green('Routes set'))
 
     this.app.listen(this.config.port, () => {
-      console.log(chalk.cyan('\n=== Server information ===\n'))
-      console.log(chalk.green(`✓ Server running on port: ${chalk.yellow(this.config.port)}`))
-      console.log(chalk.green(`✓ API prefix: ${chalk.yellow(this.config.prefix || '/')}`))
-      console.log(chalk.green(`✓ Response delay: ${chalk.yellow(this.config.delay || 0)} ms`))
-      console.log(chalk.green(`✓ Authentication status: ${this.config.auth?.enabled ? chalk.green('Enabled') : chalk.red('Disabled')}\n`))
-
-      // 打印所有路由信息
-      console.log(chalk.cyan('\n=== Registered Routes ===\n'))
-      this.app._router.stack.forEach((r: any) => {
-        if (r.route && r.route.path) {
-          const methods = Object.keys(r.route.methods)
-            .filter(method => method !== '_all')
-            .map(method => chalk.yellow(method.toUpperCase()))
-            .join(', ')
-
-          console.log(
-            `${chalk.green('→')} ${methods} ${chalk.blue(r.route.path)}`,
-          )
-        }
-      })
-      console.log(chalk.cyan('\n=========================\n'))
+      this.logger.info(chalk.hex('#00BFFF')(`\n┌${'─'.repeat(50)}`))
+      this.logger.info(chalk.hex('#00BFFF').bold('│ 服务运行信息'))
+      this.logger.info(chalk.hex('#00BFFF')(`├${'─'.repeat(50)}`))
+      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('端口号:')} ${this.config.port}`))
+      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('API前缀:')} ${this.config.prefix || '/'}`))
+      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('响应延迟:')} ${this.config.delay || 0}ms`))
+      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('认证状态:')} ${this.config.auth?.enabled ? chalk.green('已启用') : chalk.gray('未启用')}`))
+      this.logger.info(chalk.hex('#00BFFF')(`└${'─'.repeat(50)}\n`))
     })
   }
 
@@ -162,18 +158,19 @@ class MockServer {
     const { resource } = req.params
     const { current_page = 1, page_size = 10, ...query } = req.query as QueryParams
 
-    console.log(chalk.cyan(`\n[GET] ${resource} list request`))
-    console.log(chalk.gray(`Parameters: ${JSON.stringify({ current_page, page_size, ...query }, null, 2)}`))
+    this.logger.info(`[GET] ${resource} list request`)
+    this.logger.debug(`Parameters: ${JSON.stringify({ current_page, page_size, ...query }, null, 2)}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
-      console.log(chalk.red('✗ Database not found'))
+      this.logger.error(chalk.red('✗ Database not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     let collection = db.getModel(resource)
     if (!collection) {
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -209,14 +206,14 @@ class MockServer {
     const { resource, id } = req.params
     const db = this.configManager.getDatabase()
     if (!db) {
-      console.log(chalk.red('Resource not found'))
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const item = db.getModel(resource)?.findById(id)
     if (!item) {
-      console.log(chalk.red('Not found'))
+      this.logger.error(chalk.red('✗ Not found'))
       res.status(404).json({ error: 'Not found' })
       return
     }
@@ -232,20 +229,20 @@ class MockServer {
   private async handlePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource } = req.params
 
-    console.log(chalk.cyan(`\n[POST] Create ${resource}`))
-    console.log(chalk.gray(`Data: ${JSON.stringify(req.body, null, 2)}`))
+    this.logger.info(`[POST] Create ${resource}`)
+    this.logger.debug(`Data: ${JSON.stringify(req.body, null, 2)}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
-      console.log(chalk.red('✗ Database not found'))
+      this.logger.error(chalk.red('✗ Database not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const { error, value } = this.validator.validate(resource, req.body)
     if (error) {
-      console.log(chalk.red('✗ Validation error'))
-      console.log(chalk.red(error.details.map(detail => detail.message).join('\n')))
+      this.logger.error(chalk.red('✗ Validation error'))
+      this.logger.error(error.details.map(detail => detail.message).join('\n'))
       res.status(400).json({
         error: 'Validation error',
         details: error.details.map(detail => detail.message),
@@ -255,7 +252,7 @@ class MockServer {
 
     const collection = db.getModel(resource)
     if (!collection) {
-      console.log(chalk.red('Resource not found'))
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -281,12 +278,12 @@ class MockServer {
   private async handlePut(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource, id } = req.params
 
-    console.log(chalk.cyan(`\n[PUT] Update ${resource}/${id}`))
-    console.log(chalk.gray(`Data: ${JSON.stringify(req.body, null, 2)}`))
+    this.logger.info(`[PUT] Update ${resource}/${id}`)
+    this.logger.debug(`Data: ${JSON.stringify(req.body, null, 2)}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
-      console.log(chalk.red('Resource not found'))
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -302,7 +299,7 @@ class MockServer {
 
     const collection = db.getModel(resource)
     if (!collection) {
-      console.log(chalk.red('Resource not found'))
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
@@ -320,31 +317,31 @@ class MockServer {
   private async handleDelete(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource, id } = req.params
 
-    console.log(chalk.cyan(`\n[DELETE] Delete ${resource}/${id}`))
+    this.logger.info(`[DELETE] Delete ${resource}/${id}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
-      console.log(chalk.red('Resource not found'))
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const collection = db.getModel(resource)
     if (!collection) {
-      console.log(chalk.red('Resource not found'))
+      this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
 
     const item = collection.findById(id)
     if (!item) {
-      console.log(chalk.red('Not found'))
+      this.logger.error(chalk.red('✗ Not found'))
       res.status(404).json({ error: 'Not found' })
       return
     }
 
     if (this.config.auth?.enabled && item.createdBy !== req.user?.id) {
-      console.log(chalk.red('Permission denied'))
+      this.logger.error(chalk.red('✗ Permission denied'))
       res.status(403).json({ error: 'Permission denied' })
       return
     }

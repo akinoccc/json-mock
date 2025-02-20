@@ -1,16 +1,21 @@
 import type { NextFunction, Request, Response } from 'express'
 import type { AuthConfig, AuthenticatedRequest } from './types'
 import jwt from 'jsonwebtoken'
+import { createLogger } from './logger'
+import chalk from 'chalk'
+import log from 'loglevel'
 
 class Auth {
   private secret: jwt.Secret
   private expiresIn: jwt.SignOptions['expiresIn']
   private excludePaths: Set<string>
+  private logger: log.Logger
 
   constructor(options: AuthConfig = {
     enabled: false,
     secret: '',
   }) {
+    this.logger = createLogger('Auth')
     this.secret = options.secret
     this.expiresIn = options.expiresIn || '1h'
     this.excludePaths = new Set(options.excludePaths || [])
@@ -24,7 +29,8 @@ class Auth {
     try {
       return jwt.verify(token, this.secret)
     }
-    catch (error) {
+    catch (error: any) {
+      this.logger.error(chalk`{red ▶ JWT验证失败!} {gray 错误类型:} {white ${error.name}} {gray 详情:} {white ${error.message}}`)
       return null
     }
   }

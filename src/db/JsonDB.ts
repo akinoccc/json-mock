@@ -1,9 +1,13 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
+import { createLogger } from '../logger'
 import { Collection } from './Collection'
 import { ModelManager } from './ModelManager'
 import { ModelScanner } from './ModelScanner'
+import chalk from 'chalk'
+
+const logger = createLogger('DB') // 创建DB模块logger
 
 export class JsonDB {
   private data: any = {}
@@ -35,7 +39,15 @@ export class JsonDB {
   }
 
   private saveData() {
-    writeFileSync(this.dbFilePath, JSON.stringify(this.data, null, 2))
+    logger.debug('Saving database...')
+    try {
+      writeFileSync(this.dbFilePath, JSON.stringify(this.data, null, 2))
+      logger.trace('Database saved successfully')
+    }
+    catch (error) {
+      logger.error('Failed to save database:', error)
+      throw error
+    }
   }
 
   collection(name: string) {
@@ -69,8 +81,16 @@ export class JsonDB {
   }
 
   async dropDb() {
-    this.data = {}
-    await rm(this.dbFilePath)
+    logger.warn(chalk`{yellow ▶ 正在清空数据库... 存储文件: {gray ${this.dbFilePath}}}`)
+    
+    try {
+      await rm(this.dbFilePath)
+      logger.info(chalk`{green ✔ 数据库清空成功} {gray 已删除文件: ${this.dbFilePath}}`)
+    }
+    catch (error) {
+      logger.error(chalk`{red ✗ 数据库清空失败!} {gray 原因:} {white ${error.message}}`)
+      throw error
+    }
   }
 
   async initialize() {
