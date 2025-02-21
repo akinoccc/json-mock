@@ -12,8 +12,9 @@ import chalk from 'chalk'
 import cors from 'cors'
 import express from 'express'
 import Auth from './auth'
-import { createLogger, logger } from './logger'
+import { createLogger } from './logger'
 import Service from './service'
+import { getFilterOperator } from './utils'
 import Validator from './validator'
 
 class MockServer {
@@ -100,30 +101,56 @@ class MockServer {
    * @returns void
    */
   public async start(): Promise<void> {
-    this.logger.info(chalk.hex('#00BFFF')(`\n┌${'─'.repeat(40)}`))
-    this.logger.info(chalk.hex('#00BFFF').bold('│ Mock Server 启动中...'))
-    this.logger.info(chalk.hex('#00BFFF')(`└${'─'.repeat(40)}\n`))
+    // console.info(chalk.blue(`\n┌${'─'.repeat(40)}`))
+    console.info(chalk.blue.bold('\n Mock Server Starting... \n'))
+    // console.info(chalk.blue(`└${'─'.repeat(40)}\n`))
 
     await this.configManager.initialize()
-    this.logger.debug(chalk`{gray ▶ 配置管理器初始化完成}`)
+    console.info(chalk.green('▶ Config manager initialized'))
 
     this.setupMiddlewares()
-    this.logger.debug(chalk`{gray ▶ 中间件加载完成 (共 ${this.middlewares.pre.length + this.middlewares.post.length} 个)}`)
+    console.info(chalk.green(`▶ Middlewares loaded (Total: ${this.middlewares.pre.length + this.middlewares.post.length})`))
 
     this.middlewares.pre.forEach(middleware => this.app.use(middleware))
     this.setupRoutes()
     this.middlewares.post.forEach(middleware => this.app.use(middleware))
-    this.logger.info(chalk.green('Routes set'))
+    console.info(chalk.green('▶ Routes set'))
 
     this.app.listen(this.config.port, () => {
-      this.logger.info(chalk.hex('#00BFFF')(`\n┌${'─'.repeat(50)}`))
-      this.logger.info(chalk.hex('#00BFFF').bold('│ 服务运行信息'))
-      this.logger.info(chalk.hex('#00BFFF')(`├${'─'.repeat(50)}`))
-      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('端口号:')} ${this.config.port}`))
-      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('API前缀:')} ${this.config.prefix || '/'}`))
-      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('响应延迟:')} ${this.config.delay || 0}ms`))
-      this.logger.info(chalk.hex('#00BFFF')(`│ ${chalk.bold('认证状态:')} ${this.config.auth?.enabled ? chalk.green('已启用') : chalk.gray('未启用')}`))
-      this.logger.info(chalk.hex('#00BFFF')(`└${'─'.repeat(50)}\n`))
+      console.info(chalk.blue(`\n┌${'─'.repeat(50)}┐`))
+      console.info(`${chalk.blue.bold('│ Server Info'.padEnd(51))}│`)
+      console.info(chalk.blue(`├${'─'.repeat(50)}┤`))
+
+      console.info(chalk.cyan(`${`│ ${chalk.bold('Port:'.padEnd(10))} ${String(this.config.port)}`.padEnd(60)}│`))
+      console.info(chalk.cyan(`${`│ ${chalk.bold('Prefix:'.padEnd(10))} ${(this.config.prefix || '/')}`.padEnd(60)}│`))
+      console.info(chalk.cyan(`${`│ ${chalk.bold('Delay:'.padEnd(10))} ${String(this.config.delay || 0)}ms`.padEnd(60)}│`))
+      console.info(chalk.cyan(`${`│ ${chalk.bold('Auth:'.padEnd(10))} ${this.config.auth?.enabled ? chalk.green('Enabled') : chalk.gray('Disabled')}`.padEnd(70)}│`))
+
+      console.info(chalk.blue(`└${'─'.repeat(50)}┘\n`))
+      // 路由信息
+      console.info(chalk.blue(`┌${'─'.repeat(50)}┐`))
+      console.info(`${chalk.blue.bold('│ Routes Info'.padEnd(51))}│`)
+      console.info(chalk.blue(`├${'─'.repeat(50)}┤`))
+
+      this.app._router.stack.forEach((r: any, index: number) => {
+        if (r.route) {
+          const method = r.route.stack[0].method.toUpperCase()
+          const methodLabel = `[${method}]`.padEnd(10)
+          const path = r.route.path.padEnd(38)
+
+          console.info(
+            chalk.blue('│ ')
+            + chalk.green.bold(`${methodLabel}`)
+            + chalk.black(`${path}`)
+            + chalk.blue(' │'),
+          )
+
+          const lineChar = index === this.app._router.stack.length - 1 ? '└' : '├'
+          console.info(chalk.blue(`${lineChar}${'─'.repeat(50)}${lineChar === '└' ? '┘' : '┤'}`))
+        }
+      })
+
+      console.info('\n')
     })
   }
 
@@ -158,13 +185,12 @@ class MockServer {
     const { resource } = req.params
     const { current_page = 1, page_size = 10, ...query } = req.query as QueryParams
 
-    this.logger.info(`[GET] ${resource} list request`)
-    this.logger.debug(`Parameters: ${JSON.stringify({ current_page, page_size, ...query }, null, 2)}`)
+    this.logger.info(`${chalk.green('[GET]')} ${req.url}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
       this.logger.error(chalk.red('✗ Database not found'))
-      res.status(404).json({ error: 'Resource not found' })
+      res.status(404).json({ error: 'Database not found' })
       return
     }
 
@@ -176,25 +202,31 @@ class MockServer {
     }
 
     Object.entries(query).forEach(([key, value]) => {
-      collection = collection.where(key, '=', value)
+      collection = collection.where(key, getFilterOperator(key), value)
     })
 
-    const data = collection.find()
-    const start = (current_page - 1) * page_size
-    const end = current_page * page_size
-    const paginatedData = data.slice(start, end)
+    try {
+      const data = collection.find()
+      const start = (current_page - 1) * page_size
+      const end = current_page * page_size
+      const paginatedData = data.slice(start, end)
 
-    const response: PaginatedResponse<any> = {
-      data: paginatedData,
-      pagination: {
-        total: data.length,
-        current_page: Number.parseInt(String(current_page)),
-        per_page: Number.parseInt(String(page_size)),
-        total_pages: Math.ceil(data.length / page_size),
-      },
+      const response: PaginatedResponse<any> = {
+        data: paginatedData,
+        pagination: {
+          total: data.length,
+          current_page: Number.parseInt(String(current_page)),
+          per_page: Number.parseInt(String(page_size)),
+          total_pages: Math.ceil(data.length / page_size),
+        },
+      }
+      res.json(response)
     }
-
-    res.json(response)
+    catch (error) {
+      this.logger.error(chalk.red('✗ Failed to get list'))
+      this.logger.error(error)
+      res.status(500).json({ error: 'Failed to get list' })
+    }
   }
 
   /**
@@ -229,8 +261,7 @@ class MockServer {
   private async handlePost(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource } = req.params
 
-    this.logger.info(`[POST] Create ${resource}`)
-    this.logger.debug(`Data: ${JSON.stringify(req.body, null, 2)}`)
+    this.logger.info(`${chalk.green('[POST]')} ${req.url} ${JSON.stringify(req.body)}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
@@ -262,12 +293,19 @@ class MockServer {
       createdBy: req.user?.id,
     }
 
-    const result = collection.insert(newItem)
+    try {
+      const result = collection.insert(newItem)
 
-    res.status(200).json({
-      data: result,
-      message: 'Resource created successfully',
-    })
+      res.status(200).json({
+        data: result,
+        message: 'Resource created successfully',
+      })
+    }
+    catch (error) {
+      this.logger.error(chalk.red('✗ Failed to create resource'))
+      this.logger.error(error)
+      res.status(500).json({ error: 'Failed to create resource' })
+    }
   }
 
   /**
@@ -278,8 +316,7 @@ class MockServer {
   private async handlePut(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource, id } = req.params
 
-    this.logger.info(`[PUT] Update ${resource}/${id}`)
-    this.logger.debug(`Data: ${JSON.stringify(req.body, null, 2)}`)
+    this.logger.info(`${chalk.green('[PUT]')} ${req.url} ${JSON.stringify(req.body)}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
@@ -304,9 +341,15 @@ class MockServer {
       return
     }
 
-    const result = collection.updateById(id, { ...value, updatedAt: Date.now() })
-
-    res.json(result)
+    try {
+      const result = collection.updateById(id, { ...value, updatedAt: Date.now() })
+      res.json(result)
+    }
+    catch (error) {
+      this.logger.error(chalk.red('✗ Failed to update resource'))
+      this.logger.error(error)
+      res.status(500).json({ error: 'Failed to update resource' })
+    }
   }
 
   /**
@@ -317,7 +360,7 @@ class MockServer {
   private async handleDelete(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { resource, id } = req.params
 
-    this.logger.info(`[DELETE] Delete ${resource}/${id}`)
+    this.logger.info(`${chalk.green('[DELETE]')} ${req.url}`)
 
     const db = this.configManager.getDatabase()
     if (!db) {
@@ -333,22 +376,29 @@ class MockServer {
       return
     }
 
-    const item = collection.findById(id)
-    if (!item) {
-      this.logger.error(chalk.red('✗ Not found'))
-      res.status(404).json({ error: 'Not found' })
-      return
+    try {
+      const item = collection.findById(id)
+      if (!item) {
+        this.logger.error(chalk.red('✗ Not found'))
+        res.status(404).json({ error: 'Not found' })
+        return
+      }
+
+      if (this.config.auth?.enabled && item.createdBy !== req.user?.id) {
+        this.logger.error(chalk.red('✗ Permission denied'))
+        res.status(403).json({ error: 'Permission denied' })
+        return
+      }
+
+      collection.delete()
+
+      res.status(204).end()
     }
-
-    if (this.config.auth?.enabled && item.createdBy !== req.user?.id) {
-      this.logger.error(chalk.red('✗ Permission denied'))
-      res.status(403).json({ error: 'Permission denied' })
-      return
+    catch (error) {
+      this.logger.error(chalk.red('✗ Failed to delete resource'))
+      this.logger.error(error)
+      res.status(500).json({ error: 'Failed to delete resource' })
     }
-
-    collection.delete()
-
-    res.status(204).end()
   }
 
   /**
