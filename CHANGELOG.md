@@ -1,3 +1,16 @@
+# [1.1.0-beta.2](https://github.com/akinoccc/jsonx-mock/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2025-02-21)
+
+
+### Bug Fixes
+
+* **db:** query chain not clear after execute query ([de2b061](https://github.com/akinoccc/jsonx-mock/commit/de2b061529e2d361eaad4a6264ddcfacac605fea))
+
+
+### Features
+
+* **db:** add sql log ([df29035](https://github.com/akinoccc/jsonx-mock/commit/df29035577dea4091b1cc5dcaaac644ce1878096))
+* support multiple query operators ([5d8ca90](https://github.com/akinoccc/jsonx-mock/commit/5d8ca90f5268676f739c0b1abdd59329d6265a5b))
+
 # [1.1.0-beta.1](https://github.com/akinoccc/jsonx-mock/compare/v1.0.1-beta.2...v1.1.0-beta.1) (2025-02-20)
 
 
