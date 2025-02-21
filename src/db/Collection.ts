@@ -1,4 +1,6 @@
+import type log from 'loglevel'
 import type { SchemaDefinition } from './Validator'
+import { createLogger } from '../logger'
 import { Validator } from './Validator'
 
 interface QueryOperator {
@@ -7,33 +9,40 @@ interface QueryOperator {
   value: any
 }
 
-type ComparisonOperator =
-  | '='
-  | '!='
-  | '>'
-  | '>='
-  | '<'
-  | '<='
-  | 'in'
-  | 'not-in'
-  | 'contains'
-  | 'starts-with'
-  | 'ends-with'
-  | 'exists'
-  | 'between'
-  | 'is empty'
-  | 'is not empty'
+export enum ComparisonOperator {
+  EQUAL = '=',
+  NOT_EQUAL = '!=',
+  GREATER_THAN = '>',
+  LESS_THAN = '<',
+  GREATER_THAN_OR_EQUAL = '>=',
+  LESS_THAN_OR_EQUAL = '<=',
+  IN = 'in',
+  NOT_IN = 'not-in',
+  CONTAINS = 'contains',
+  STARTS_WITH = 'starts-with',
+  ENDS_WITH = 'ends-with',
+  EXISTS = 'exists',
+  BETWEEN = 'between',
+  IS_EMPTY = 'is empty',
+  IS_NOT_EMPTY = 'is not empty',
+}
 
 export class Collection {
   private data: any[]
+  private name: string
   private queryChain: QueryOperator[]
   private saveCallback: () => void
   private validator?: Validator
+  private logger: log.Logger
 
-  constructor(data: any[], saveCallback: () => void) {
+  constructor(name: string, data: any[], saveCallback: () => void) {
+    this.name = name
     this.data = data
     this.queryChain = []
     this.saveCallback = saveCallback
+
+    this.logger = createLogger('DB')
+    this.logger.setLevel('debug')
   }
 
   where(field: string, operator: ComparisonOperator, value?: any) {
@@ -53,12 +62,13 @@ export class Collection {
   }
 
   findById(id: string | number) {
-    this.queryChain.push({ field: 'id', operator: '=', value: id })
+    this.queryChain.push({ field: 'id', operator: ComparisonOperator.EQUAL, value: id })
     const results = this.executeQuery()
     return results[0] || null
   }
 
   insert(doc: any) {
+    this.logSql('INSERT', doc)
     const validation = this.validateDocument(doc)
     if (!validation.isValid) {
       throw new Error(`validation failed: ${validation.errors.join(', ')}`)
@@ -71,6 +81,7 @@ export class Collection {
   }
 
   updateMany(updateData: any) {
+    this.logSql('UPDATE', updateData)
     // update should not be validated
     // const validation = this.validateDocument(updateData)
     // if (!validation.isValid) {
@@ -86,14 +97,12 @@ export class Collection {
   }
 
   updateById(id: string | number, updateData: any) {
-    const toUpdate = this.findById(id)
-    if (!toUpdate) {
-      throw new Error('Not found')
-    }
+    this.queryChain.push({ field: 'id', operator: ComparisonOperator.EQUAL, value: id })
     return this.updateMany(updateData)?.[0]
   }
 
   delete() {
+    this.logSql('DELETE')
     const toDelete = this.executeQuery()
     toDelete.forEach((item) => {
       const index = this.data.indexOf(item)
@@ -228,28 +237,29 @@ export class Collection {
   }
 
   private executeQuery() {
-    return this.data.filter((item) => {
+    this.logSql('')
+    const result = this.data.filter((item) => {
       return this.queryChain.every(({ field, operator, value }) => {
         const fieldValue = item[field]
 
         switch (operator) {
-          case '=':
+          case ComparisonOperator.EQUAL:
             return fieldValue === value
-          case '!=':
+          case ComparisonOperator.NOT_EQUAL:
             return fieldValue !== value
-          case '>':
+          case ComparisonOperator.GREATER_THAN:
             return fieldValue > value
-          case '>=':
+          case ComparisonOperator.GREATER_THAN_OR_EQUAL:
             return fieldValue >= value
-          case '<':
+          case ComparisonOperator.LESS_THAN:
             return fieldValue < value
-          case '<=':
+          case ComparisonOperator.LESS_THAN_OR_EQUAL:
             return fieldValue <= value
-          case 'in':
+          case ComparisonOperator.IN:
             return Array.isArray(value) && value.includes(fieldValue)
-          case 'not-in':
+          case ComparisonOperator.NOT_IN:
             return Array.isArray(value) && !value.includes(fieldValue)
-          case 'contains':
+          case ComparisonOperator.CONTAINS:
             if (typeof fieldValue === 'string') {
               return fieldValue.includes(String(value))
             }
@@ -257,25 +267,29 @@ export class Collection {
               return fieldValue.includes(value)
             }
             return false
-          case 'starts-with':
+          case ComparisonOperator.STARTS_WITH:
             return typeof fieldValue === 'string'
               && fieldValue.startsWith(String(value))
-          case 'ends-with':
+          case ComparisonOperator.ENDS_WITH:
             return typeof fieldValue === 'string'
               && fieldValue.endsWith(String(value))
-          case 'exists':
+          case ComparisonOperator.EXISTS:
             return value ? field in item : !(field in item)
-          case 'between':
+          case ComparisonOperator.BETWEEN:
             return fieldValue >= value[0] && fieldValue <= value[1]
-          case 'is empty':
-            return fieldValue === '' || fieldValue === null || fieldValue === undefined || (Array.isArray(fieldValue) && fieldValue.length === 0)
-          case 'is not empty':
-            return fieldValue !== '' && fieldValue !== null && fieldValue !== undefined || (Array.isArray(fieldValue) && fieldValue.length > 0)
+          case ComparisonOperator.IS_EMPTY:
+            return (fieldValue === '' || fieldValue === null || fieldValue === undefined) || (Array.isArray(fieldValue) && fieldValue.length === 0)
+          case ComparisonOperator.IS_NOT_EMPTY:
+            return (fieldValue !== '' && fieldValue !== null && fieldValue !== undefined) || (Array.isArray(fieldValue) && fieldValue.length > 0)
           default:
             return false
         }
       })
     })
+
+    this.queryChain = []
+    this.logger.info(`FOUND ${result.length} records`)
+    return result
   }
 
   private generateId(): string {
@@ -351,6 +365,40 @@ export class Collection {
         return false
     }
     return true
+  }
+
+  private logSql(operation: string, data?: any) {
+    const conditions = this.queryChain
+      .map(q => `${q.field} ${q.operator} ${JSON.stringify(q.value)}`)
+      .join(' AND ')
+
+    let sql = ''
+    switch (operation.toUpperCase()) {
+      case 'INSERT':
+      {
+        const values = data ? `VALUES ${JSON.stringify(data)}` : ''
+        sql = `INSERT INTO ${this.name} ${values}`
+        break
+      }
+
+      case 'UPDATE':
+      {
+        const setClause = data ? `SET ${Object.keys(data).map(k => `${k}=${JSON.stringify(data[k])}`).join(', ')}` : ''
+        sql = `UPDATE ${this.name} ${setClause} ${conditions ? `WHERE ${conditions}` : ''}`
+        break
+      }
+
+      case 'DELETE':
+      {
+        sql = `DELETE FROM ${this.name} ${conditions ? `WHERE ${conditions}` : ''}`
+        break
+      }
+
+      default: // SELECT/FIND
+        sql = `SELECT * FROM ${this.name} ${conditions ? `WHERE ${conditions}` : ''}`
+    }
+
+    this.logger.info(sql)
   }
 }
 

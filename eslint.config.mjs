@@ -1,10 +1,7 @@
 import antfu from '@antfu/eslint-config'
 
 export default antfu({
-  ignores: ['test/fixtures/**/*.json'],
-}, {
-  files: ['src/**/*.ts'],
-  rules: {},
+  ignores: ['__tests__/fixtures/**/*.json', 'dist/**', 'node_modules/**'],
 }, {
   files: ['release.config.mjs'],
   rules: {
@@ -17,4 +14,5 @@ export default antfu({
   'jsdoc/require-returns-check': 'off',
   'unused-imports/no-unused-vars': 'warn',
   'antfu/no-top-level-await': 'off',
+  'unused-imports/no-unused-imports': 'off',
 })

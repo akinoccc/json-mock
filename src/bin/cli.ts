@@ -4,9 +4,9 @@ import type { Config } from '../types'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import chalk from 'chalk'
 import { program } from 'commander'
 import { loadConfig } from 'unconfig'
-import chalk from 'chalk'
 
 import MockServer from '../index'
 import { createLogger } from '../logger'
@@ -52,20 +52,18 @@ async function loadConfigFile() {
     return config
   }
   catch (e: any) {
-    logger.error(chalk`{red ▶ 配置文件加载失败!}\n{gray 错误详情:} {white ${e.message}}`)
-    process.exit(1)
+    logger.error(chalk.red(`▶ Config file loading failed! Error details: ${e.message}`))
   }
 }
 
 const configFromFile = await loadConfigFile()
 
-console.log(configFromFile)
-
 const config: Config = {
-  port: Number.parseInt(options.port || configFromFile.port),
-  delay: Number.parseInt(options.delay || configFromFile.delay),
-  dbStoragePath: options.dbStoragePath || configFromFile.dbStorage,
-  dbModelPath: options.dbModelPath || configFromFile.dbModel,
+  port: Number.parseInt(options.port || configFromFile?.port),
+  prefix: options.prefix || configFromFile?.prefix,
+  delay: Number.parseInt(options.delay || configFromFile?.delay),
+  dbStoragePath: options.dbStoragePath || configFromFile?.dbStorage,
+  dbModelPath: options.dbModelPath || configFromFile?.dbModel,
 }
 
 const server = new MockServer(config)

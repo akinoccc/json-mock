@@ -1,9 +1,9 @@
 import type { NextFunction, Request, Response } from 'express'
+import type log from 'loglevel'
 import type { AuthConfig, AuthenticatedRequest } from './types'
+import chalk from 'chalk'
 import jwt from 'jsonwebtoken'
 import { createLogger } from './logger'
-import chalk from 'chalk'
-import log from 'loglevel'
 
 class Auth {
   private secret: jwt.Secret
