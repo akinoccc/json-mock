@@ -46,9 +46,7 @@ export class Collection {
   }
 
   where(field: string, operator: ComparisonOperator, value?: any) {
-    if (this.validator?.getSchema()?.[field]?.filterable) {
-      this.queryChain.push({ field, operator, value })
-    }
+    this.queryChain.push({ field, operator, value })
     return this
   }
 
