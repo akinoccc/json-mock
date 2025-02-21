@@ -1,3 +1,10 @@
+# [1.1.0-beta.3](https://github.com/akinoccc/jsonx-mock/compare/v1.1.0-beta.2...v1.1.0-beta.3) (2025-02-21)
+
+
+### Bug Fixes
+
+* **db:** query params not take effect ([42397d0](https://github.com/akinoccc/jsonx-mock/commit/42397d04586d9095b22379ce11208d6d8c5428ca))
+
 # [1.1.0-beta.2](https://github.com/akinoccc/jsonx-mock/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2025-02-21)
 
 
