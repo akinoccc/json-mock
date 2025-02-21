@@ -1,7 +1,7 @@
+import type { Collection } from '../src/db'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import Service from '../src/service'
 import { getRandomString } from './util'
-import { Collection } from '../src/db'
 
 describe('service test', () => {
   it('should initialize database', async () => {

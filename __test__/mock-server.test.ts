@@ -26,7 +26,7 @@ describe('mock server', () => {
       port,
       delay: 0,
       prefix: '/api',
-      dbStoragePath: dbStoragePath,
+      dbStoragePath,
       dbModelPath: new URL('./models.ts', import.meta.url).pathname,
     })
 
@@ -208,7 +208,6 @@ describe('mock server', () => {
     let middlewareServer: MockServer
     let middlewareApp: e.Express
     const middlewareDbStoragePath = new URL(`./data-${getRandomString()}.json`, import.meta.url).pathname
-      
 
     beforeEach(async () => {
       middlewareServer = new MockServer({
@@ -225,7 +224,6 @@ describe('mock server', () => {
     })
 
     it('should handle pre middleware', async () => {
-
       middlewareServer.pre((req, _, next) => {
         req.query.page_size = '1'
         next()

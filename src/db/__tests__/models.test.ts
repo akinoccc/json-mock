@@ -2,6 +2,7 @@ import type { Collection } from '../Collection'
 import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ComparisonOperator } from '../Collection'
 import { AutoIncrement, Field, Model } from '../decorators'
 import { JsonDB } from '../JsonDB'
 
@@ -136,7 +137,7 @@ describe('model system', () => {
       ])
 
       const result = userModel
-        .where('age', '>', 25)
+        .where('age', ComparisonOperator.GREATER_THAN, 25)
         .find()
 
       expect(result).toHaveLength(1)
@@ -147,7 +148,7 @@ describe('model system', () => {
       userModel.insert({ name: 'Hua Li', age: 25 })
 
       userModel
-        .where('name', '=', 'Hua Li')
+        .where('name', ComparisonOperator.EQUAL, 'Hua Li')
         .updateMany({ age: 26 })
 
       const updated = userModel.findOne()
@@ -158,7 +159,7 @@ describe('model system', () => {
       userModel.insert({ name: 'Hua Li', age: 25 })
 
       userModel
-        .where('name', '=', 'Hua Li')
+        .where('name', ComparisonOperator.EQUAL, 'Hua Li')
         .delete()
 
       const result = userModel.find()
@@ -185,7 +186,7 @@ describe('model system', () => {
 
     it('should support association query', () => {
       const posts = postModel
-        .where('authorId', '=', 1)
+        .where('authorId', ComparisonOperator.EQUAL, 1)
         .populate('author', {
           from: userModel,
           localField: 'authorId',

@@ -1,11 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import path from 'node:path'
+import chalk from 'chalk'
 import { createLogger } from '../logger'
 import { Collection } from './Collection'
 import { ModelManager } from './ModelManager'
 import { ModelScanner } from './ModelScanner'
-import chalk from 'chalk'
 
 const logger = createLogger('DB') // 创建DB模块logger
 
@@ -82,7 +82,7 @@ export class JsonDB {
 
   async dropDb() {
     logger.warn(chalk`{yellow ▶ 正在清空数据库... 存储文件: {gray ${this.dbFilePath}}}`)
-    
+
     try {
       await rm(this.dbFilePath)
       logger.info(chalk`{green ✔ 数据库清空成功} {gray 已删除文件: ${this.dbFilePath}}`)
