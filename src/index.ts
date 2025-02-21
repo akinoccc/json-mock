@@ -42,6 +42,7 @@ class MockServer {
     dbModelPath: '',
     dbStoragePath: '',
   } as Config) {
+    console.log(config)
     this.config = config
 
     this.app = express()
@@ -202,7 +203,10 @@ class MockServer {
     }
 
     Object.entries(query).forEach(([key, value]) => {
-      collection = collection.where(key, getFilterOperator(key), value)
+      const { field, operator } = getFilterOperator(key)
+      if (operator) {
+        collection = collection.where(field, operator, value)
+      }
     })
 
     try {
@@ -243,7 +247,23 @@ class MockServer {
       return
     }
 
-    const item = db.getModel(resource)?.findById(id)
+    let collection = db.getModel(resource)
+    if (!collection) {
+      this.logger.error(chalk.red('✗ Resource not found'))
+      res.status(404).json({ error: 'Resource not found' })
+      return
+    }
+
+    const query = req.query as QueryParams
+
+    Object.entries(query).forEach(([key, value]) => {
+      const { field, operator } = getFilterOperator(key)
+      if (operator) {
+        collection = collection.where(field, operator, value)
+      }
+    })
+
+    const item = collection.findById(id)
     if (!item) {
       this.logger.error(chalk.red('✗ Not found'))
       res.status(404).json({ error: 'Not found' })
@@ -325,19 +345,29 @@ class MockServer {
       return
     }
 
+    let collection = db.getModel(resource)
+    if (!collection) {
+      this.logger.error(chalk.red('✗ Resource not found'))
+      res.status(404).json({ error: 'Resource not found' })
+      return
+    }
+
+    const query = req.query as QueryParams
+
+    Object.entries(query).forEach(([key, value]) => {
+      const { field, operator } = getFilterOperator(key)
+      if (operator) {
+        collection = collection.where(field, operator, value)
+      }
+    })
     const { error, value } = this.validator.validate(resource, req.body)
     if (error) {
+      this.logger.error(chalk.red('✗ Validation error'))
+      this.logger.error(error.details.map(detail => detail.message).join('\n'))
       res.status(400).json({
         error: 'Validation error',
         details: error.details.map(detail => detail.message),
       })
-      return
-    }
-
-    const collection = db.getModel(resource)
-    if (!collection) {
-      this.logger.error(chalk.red('✗ Resource not found'))
-      res.status(404).json({ error: 'Resource not found' })
       return
     }
 
@@ -369,12 +399,21 @@ class MockServer {
       return
     }
 
-    const collection = db.getModel(resource)
+    let collection = db.getModel(resource)
     if (!collection) {
       this.logger.error(chalk.red('✗ Resource not found'))
       res.status(404).json({ error: 'Resource not found' })
       return
     }
+
+    const query = req.query as QueryParams
+
+    Object.entries(query).forEach(([key, value]) => {
+      const { field, operator } = getFilterOperator(key)
+      if (operator) {
+        collection = collection.where(field, operator, value)
+      }
+    })
 
     try {
       const item = collection.findById(id)

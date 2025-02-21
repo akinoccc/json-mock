@@ -3,29 +3,42 @@ import { ComparisonOperator } from './db'
 
 export function getFilterOperator(param: string) {
   // split param by '_', get the last one
-  const operator = param.split('_').pop()
-  switch (operator) {
+  const operatorKey = param.split('_').pop()
+  const field = param.split('_').slice(0, -1).join('_')
+
+  let operator: ComparisonOperator | undefined
+
+  switch (operatorKey) {
     case FILTER_OPERATORS.EQUAL:
-      return ComparisonOperator.EQUAL
+      operator = ComparisonOperator.EQUAL
+      break
     case FILTER_OPERATORS.NOT_EQUAL:
-      return ComparisonOperator.NOT_EQUAL
+      operator = ComparisonOperator.NOT_EQUAL
+      break
     case FILTER_OPERATORS.FUZZY:
-      return ComparisonOperator.CONTAINS
+      operator = ComparisonOperator.CONTAINS
+      break
     case FILTER_OPERATORS.IN:
-      return ComparisonOperator.IN
+      operator = ComparisonOperator.IN
+      break
     case FILTER_OPERATORS.NOT_IN:
-      return ComparisonOperator.NOT_IN
+      operator = ComparisonOperator.NOT_IN
+      break
     case FILTER_OPERATORS.GREATER_THAN:
-      return ComparisonOperator.GREATER_THAN
+      operator = ComparisonOperator.GREATER_THAN
+      break
     case FILTER_OPERATORS.LESS_THAN:
-      return ComparisonOperator.LESS_THAN
+      operator = ComparisonOperator.LESS_THAN
+      break
     case FILTER_OPERATORS.GREATER_THAN_OR_EQUAL:
-      return ComparisonOperator.GREATER_THAN_OR_EQUAL
+      operator = ComparisonOperator.GREATER_THAN_OR_EQUAL
+      break
     case FILTER_OPERATORS.LESS_THAN_OR_EQUAL:
-      return ComparisonOperator.LESS_THAN_OR_EQUAL
+      operator = ComparisonOperator.LESS_THAN_OR_EQUAL
+      break
     case FILTER_OPERATORS.BETWEEN:
-      return ComparisonOperator.BETWEEN
-    default:
-      return ComparisonOperator.EQUAL
+      operator = ComparisonOperator.BETWEEN
+      break
   }
+  return { field, operator }
 }
