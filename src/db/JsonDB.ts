@@ -7,7 +7,7 @@ import { Collection } from './Collection'
 import { ModelManager } from './ModelManager'
 import { ModelScanner } from './ModelScanner'
 
-const logger = createLogger('DB') // 创建DB模块logger
+const logger = createLogger('DB')
 
 export class JsonDB {
   private data: any = {}
@@ -39,10 +39,9 @@ export class JsonDB {
   }
 
   private saveData() {
-    logger.debug('Saving database...')
     try {
       writeFileSync(this.dbFilePath, JSON.stringify(this.data, null, 2))
-      logger.trace('Database saved successfully')
+      logger.info('Database saved successfully')
     }
     catch (error) {
       logger.error('Failed to save database:', error)
@@ -55,7 +54,7 @@ export class JsonDB {
       this.data[name] = []
       this.saveData()
     }
-    return new Collection(this.data[name], () => this.saveData())
+    return new Collection(name, this.data[name], () => this.saveData())
   }
 
   getData(): any[] {
@@ -81,14 +80,14 @@ export class JsonDB {
   }
 
   async dropDb() {
-    logger.warn(chalk`{yellow ▶ 正在清空数据库... 存储文件: {gray ${this.dbFilePath}}}`)
+    logger.warn(chalk.yellow`▶ Clearing database... Saving file: ${this.dbFilePath}`)
 
     try {
       await rm(this.dbFilePath)
-      logger.info(chalk`{green ✔ 数据库清空成功} {gray 已删除文件: ${this.dbFilePath}}`)
+      logger.info(chalk.green`✔ Database cleared successfully. File deleted: ${this.dbFilePath}`)
     }
     catch (error: any) {
-      logger.error(chalk`{red ✗ 数据库清空失败!} {gray 原因:} {white ${error.message}}`)
+      logger.error(chalk.red`✗ Database clearing failed! Reason: ${error.message}`)
       throw error
     }
   }

@@ -1,4 +1,6 @@
+import type log from 'loglevel'
 import type { SchemaDefinition } from './Validator'
+import { createLogger } from '../logger'
 import { Validator } from './Validator'
 
 interface QueryOperator {
@@ -27,14 +29,20 @@ export enum ComparisonOperator {
 
 export class Collection {
   private data: any[]
+  private name: string
   private queryChain: QueryOperator[]
   private saveCallback: () => void
   private validator?: Validator
+  private logger: log.Logger
 
-  constructor(data: any[], saveCallback: () => void) {
+  constructor(name: string, data: any[], saveCallback: () => void) {
+    this.name = name
     this.data = data
     this.queryChain = []
     this.saveCallback = saveCallback
+
+    this.logger = createLogger('DB')
+    this.logger.setLevel('debug')
   }
 
   where(field: string, operator: ComparisonOperator, value?: any) {
@@ -60,6 +68,7 @@ export class Collection {
   }
 
   insert(doc: any) {
+    this.logSql('INSERT', doc)
     const validation = this.validateDocument(doc)
     if (!validation.isValid) {
       throw new Error(`validation failed: ${validation.errors.join(', ')}`)
@@ -72,6 +81,7 @@ export class Collection {
   }
 
   updateMany(updateData: any) {
+    this.logSql('UPDATE', updateData)
     // update should not be validated
     // const validation = this.validateDocument(updateData)
     // if (!validation.isValid) {
@@ -92,6 +102,7 @@ export class Collection {
   }
 
   delete() {
+    this.logSql('DELETE')
     const toDelete = this.executeQuery()
     toDelete.forEach((item) => {
       const index = this.data.indexOf(item)
@@ -226,6 +237,7 @@ export class Collection {
   }
 
   private executeQuery() {
+    this.logSql('')
     const result = this.data.filter((item) => {
       return this.queryChain.every(({ field, operator, value }) => {
         const fieldValue = item[field]
@@ -276,6 +288,7 @@ export class Collection {
     })
 
     this.queryChain = []
+    this.logger.info(`FOUND ${result.length} records`)
     return result
   }
 
@@ -352,6 +365,40 @@ export class Collection {
         return false
     }
     return true
+  }
+
+  private logSql(operation: string, data?: any) {
+    const conditions = this.queryChain
+      .map(q => `${q.field} ${q.operator} ${JSON.stringify(q.value)}`)
+      .join(' AND ')
+
+    let sql = ''
+    switch (operation.toUpperCase()) {
+      case 'INSERT':
+      {
+        const values = data ? `VALUES ${JSON.stringify(data)}` : ''
+        sql = `INSERT INTO ${this.name} ${values}`
+        break
+      }
+
+      case 'UPDATE':
+      {
+        const setClause = data ? `SET ${Object.keys(data).map(k => `${k}=${JSON.stringify(data[k])}`).join(', ')}` : ''
+        sql = `UPDATE ${this.name} ${setClause} ${conditions ? `WHERE ${conditions}` : ''}`
+        break
+      }
+
+      case 'DELETE':
+      {
+        sql = `DELETE FROM ${this.name} ${conditions ? `WHERE ${conditions}` : ''}`
+        break
+      }
+
+      default: // SELECT/FIND
+        sql = `SELECT * FROM ${this.name} ${conditions ? `WHERE ${conditions}` : ''}`
+    }
+
+    this.logger.info(sql)
   }
 }
 
